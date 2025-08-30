@@ -16,8 +16,13 @@
         - name: Add gVisor GPG key
           ansible.builtin.get_url:
             url: https://gvisor.dev/archive.key
-            dest: /usr/share/keyrings/gvisor-archive-keyring.gpg
+            dest: /tmp/gvisor-archive.key
             mode: '0644'
+
+        - name: Convert gVisor GPG key to binary
+          ansible.builtin.command:
+            cmd: "gpg --dearmor -o /usr/share/keyrings/gvisor-archive-keyring.gpg /tmp/gvisor-archive.key"
+            creates: /usr/share/keyrings/gvisor-archive-keyring.gpg
 
         - name: Add gVisor repository
           ansible.builtin.apt_repository:
