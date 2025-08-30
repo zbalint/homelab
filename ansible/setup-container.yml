@@ -1,0 +1,129 @@
+---
+- name: Setup Docker on Debian in LXC
+  hosts: localhost
+  connection: local
+  become: true
+
+  tasks:
+    - name: Check if setup already ran
+      ansible.builtin.stat:
+        path: /var/lib/ansible/setup-done
+      register: setup_done
+
+    - name: Initial setup block
+      block:
+        - name: Add Docker GPG key
+          ansible.builtin.get_url:
+            url: https://download.docker.com/linux/debian/gpg
+            dest: /etc/apt/keyrings/docker.gpg
+            mode: '0644'
+
+        - name: Add Docker repository
+          ansible.builtin.apt_repository:
+            repo: "deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+            filename: docker
+            state: present
+
+        - name: Add gVisor GPG key
+          ansible.builtin.get_url:
+            url: https://gvisor.dev/archive.key
+            dest: /usr/share/keyrings/gvisor-archive-keyring.gpg
+            mode: '0644'
+
+        - name: Add gVisor repository
+          ansible.builtin.apt_repository:
+            repo: "deb [arch={{ ansible_architecture }} signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main"
+            filename: gvisor
+            state: present
+
+        - name: Install required packages
+          ansible.builtin.apt:
+            name:
+              - nftables
+              - unattended-upgrades
+              - apt-config-auto-update
+              - ca-certificates
+              - curl
+              - gnupg
+              - runsc
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+              - docker-buildx-plugin
+              - docker-compose-plugin
+            update_cache: yes
+        
+        - name: Download nftables config from GitHub
+          ansible.builtin.get_url:
+            url: "https://raw.githubusercontent.com/yourusername/yourrepo/main/nftables.conf"
+            dest: /etc/nftables.conf
+            mode: '0644'
+            owner: root
+            group: root
+
+        - name: Enable and start nftables service
+          ansible.builtin.systemd:
+            name: nftables
+            enabled: true
+            state: started
+
+        - name: Configure Docker to use gVisor
+          ansible.builtin.copy:
+            dest: /etc/docker/daemon.json
+            content: |
+              {
+                "default-runtime": "runsc",
+                "runtimes": {
+                  "runsc": {
+                    "path": "/usr/bin/runsc",
+                    "runtimeArgs": ["--platform=systrap"]
+                  }
+                }
+              }
+            mode: '0644'
+          notify: Reload docker
+
+        - name: Install Tailscale
+          ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
+          args:
+            creates: /usr/bin/tailscale
+
+        - name: Enable Tailscale auto-update
+          ansible.builtin.command: tailscale set --auto-update
+          changed_when: false
+
+        - name: Ensure docker group exists
+          ansible.builtin.group:
+            name: docker
+            state: present
+
+        - name: Create user "tartarus"
+          ansible.builtin.user:
+            name: tartarus
+            uid: 4000
+            groups: docker
+            shell: /bin/bash
+
+        - name: Create Docker directories
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0755'
+            owner: tartarus
+            group: tartarus
+          loop:
+            - /opt/docker/stacks
+            - /opt/docker/volumes
+            - /opt/docker
+
+        - name: Create setup marker
+          ansible.builtin.file:
+            path: /var/lib/ansible/setup-done
+            state: touch
+      when: not setup_done.stat.exists
+
+  handlers:
+    - name: Reload docker
+      ansible.builtin.systemd:
+        name: docker
+        state: reloaded
