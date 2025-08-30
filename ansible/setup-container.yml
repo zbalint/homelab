@@ -128,11 +128,21 @@
             - /opt/docker/volumes
             - /opt/docker
 
+        - name: Create setup marker directory
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0755'
+            owner: root
+            group: root
+          loop:
+            - /var/lib/ansible/
+            
         - name: Create setup marker
           ansible.builtin.file:
             path: /var/lib/ansible/setup-done
             state: touch
-      when: not setup_done.stat.exists
+          when: not setup_done.stat.exists
 
   handlers:
     - name: Reload docker

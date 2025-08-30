@@ -1,0 +1,12 @@
+name: HL-ACL
+description: ''
+egress:
+  - action: allow
+    state: enabled
+  - action: drop
+    destination: 10.0.0.0/8
+    state: enabled
+ingress:
+  - action: drop
+    state: enabled
+config: {}
