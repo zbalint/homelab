@@ -26,7 +26,7 @@
 
         - name: Add Docker repository
           ansible.builtin.apt_repository:
-            repo: "deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+            repo: "deb [signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
             filename: docker
             state: present
           register: docker_repo
@@ -39,12 +39,12 @@
 
         - name: Convert gVisor GPG key to binary
           ansible.builtin.command:
-            cmd: "gpg --dearmor -o /usr/share/keyrings/gvisor-archive-keyring.gpg /tmp/gvisor-archive.key"
-            creates: /usr/share/keyrings/gvisor-archive-keyring.gpg
+            cmd: "gpg --dearmor -o /etc/apt/keyrings/gvisor-archive-keyring.gpg /tmp/gvisor-archive.key"
+            creates: /etc/apt/keyrings/gvisor-archive-keyring.gpg
 
         - name: Add gVisor repository
           ansible.builtin.apt_repository:
-            repo: "deb [arch={{ ansible_architecture }} signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main"
+            repo: "deb [signed-by=/etc/apt/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main"
             filename: gvisor
             state: present
 
