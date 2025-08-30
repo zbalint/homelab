@@ -55,7 +55,7 @@
         
         - name: Download nftables config from GitHub
           ansible.builtin.get_url:
-            url: "https://raw.githubusercontent.com/yourusername/yourrepo/main/nftables.conf"
+            url: "https://raw.githubusercontent.com/zbalint/homelab/refs/heads/master/firewall/nftables.conf"
             dest: /etc/nftables.conf
             mode: '0644'
             owner: root
