@@ -13,6 +13,19 @@
     - name: Initial setup block
       block:
 
+        - name: Add Docker GPG key
+          ansible.builtin.get_url:
+            url: https://download.docker.com/linux/debian/gpg
+            dest: /etc/apt/keyrings/docker.gpg
+            mode: '0644'
+
+        - name: Add Docker repository
+          ansible.builtin.apt_repository:
+            repo: "deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+            filename: docker
+            state: present
+          register: docker_repo
+
         - name: Add gVisor GPG key
           ansible.builtin.get_url:
             url: https://gvisor.dev/archive.key
@@ -40,6 +53,11 @@
               - curl
               - gnupg
               - runsc
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+              - docker-buildx-plugin
+              - docker-compose-plugin
             update_cache: yes
         
         - name: Download nftables config from GitHub
@@ -64,9 +82,6 @@
         - name: Enable Tailscale auto-update
           ansible.builtin.command: tailscale set --auto-update
           changed_when: false
-
-        - name: Install Docker
-          ansible.builtin.shell: curl -fsSL https://get.docker.com | sh
 
         - name: Configure Docker to use gVisor
           ansible.builtin.copy:
