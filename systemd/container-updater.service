@@ -1,0 +1,8 @@
+[Unit]
+Description=container updater - homelab lxc container meintenance service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=bash /root/homelab/bin/container_updater.sh

@@ -1,0 +1,8 @@
+[Unit]
+Description=container updater - homelab lxc container maintenance service timer
+[Timer]
+OnCalendar=*:0,30:00
+OnBootSec=1min
+Persistent=true
+[Install]
+WantedBy=timers.target

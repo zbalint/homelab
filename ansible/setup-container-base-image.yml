@@ -1,0 +1,167 @@
+---
+- name: Setup Docker on Debian in LXC
+  hosts: localhost
+  connection: local
+  become: true
+
+  tasks:
+    - name: Check if setup already ran
+      ansible.builtin.stat:
+        path: /var/lib/ansible/setup-done
+      register: setup_done
+
+    - name: Initial setup block
+      block:
+
+        - name: Add Docker GPG key
+          ansible.builtin.get_url:
+            url: https://download.docker.com/linux/debian/gpg
+            dest: /tmp/docker.key
+            mode: '0644'
+
+        - name: Convert docker GPG key to binary
+          ansible.builtin.command:
+            cmd: "gpg --dearmor -o /etc/apt/keyrings/docker.gpg /tmp/docker.key"
+            creates: /etc/apt/keyrings/docker.gpg
+
+        - name: Add Docker repository
+          ansible.builtin.apt_repository:
+            repo: "deb [signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+            filename: docker
+            state: present
+          register: docker_repo
+
+        - name: Add gVisor GPG key
+          ansible.builtin.get_url:
+            url: https://gvisor.dev/archive.key
+            dest: /tmp/gvisor-archive.key
+            mode: '0644'
+
+        - name: Convert gVisor GPG key to binary
+          ansible.builtin.command:
+            cmd: "gpg --dearmor -o /etc/apt/keyrings/gvisor-archive-keyring.gpg /tmp/gvisor-archive.key"
+            creates: /etc/apt/keyrings/gvisor-archive-keyring.gpg
+
+        - name: Add gVisor repository
+          ansible.builtin.apt_repository:
+            repo: "deb [signed-by=/etc/apt/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main"
+            filename: gvisor
+            state: present
+
+        - name: Install required packages
+          ansible.builtin.apt:
+            name:
+              - git
+              - bzip2
+              - rsync
+              - nftables
+              - unattended-upgrades
+              - apt-config-auto-update
+              - ca-certificates
+              - curl
+              - gnupg
+              - apparmor
+              - apparmor-utils
+              - runsc
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+              - docker-buildx-plugin
+              - docker-compose-plugin
+            update_cache: yes
+        
+        - name: Download nftables config from GitHub
+          ansible.builtin.get_url:
+            url: "https://raw.githubusercontent.com/zbalint/homelab/refs/heads/master/firewall/nftables.conf"
+            dest: /etc/nftables.conf
+            mode: '0644'
+            owner: root
+            group: root
+
+        - name: Enable and start nftables service
+          ansible.builtin.systemd:
+            name: nftables
+            enabled: true
+            state: started
+
+        - name: Install Tailscale
+          ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
+          args:
+            creates: /usr/bin/tailscale
+
+        - name: Enable Tailscale auto-update
+          ansible.builtin.command: tailscale set --auto-update
+          changed_when: false
+
+        - name: Ensure docker group exists
+          ansible.builtin.group:
+            name: docker
+            state: present
+
+        - name: Create user "tartarus"
+          ansible.builtin.user:
+            name: tartarus
+            uid: 4000
+            groups: docker
+            shell: /bin/bash
+
+        - name: Configure Docker to use gVisor
+          ansible.builtin.copy:
+            dest: /etc/docker/daemon.json
+            content: |
+              {
+                  "userns-remap": "tartarus",
+                  "iptables": false,
+                  "ip6tables": false,
+                  "default-address-pools": [
+                      {
+                          "base": "172.30.0.0/16",
+                          "size": 24
+                      }
+                  ],
+                  "default-runtime": "runsc",
+                  "runtimes": {
+                      "runsc": {
+                          "path": "/usr/bin/runsc",
+                          "runtimeArgs": [
+                              "--platform=systrap"
+                          ]
+                      }
+                  }
+              }
+            mode: '0644'
+          notify: Reload docker
+
+        - name: Create Docker directories
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0755'
+            owner: tartarus
+            group: tartarus
+          loop:
+            - /opt/docker/stacks
+            - /opt/docker/volumes
+            - /opt/docker
+
+        - name: Create setup marker directory
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0755'
+            owner: root
+            group: root
+          loop:
+            - /var/lib/ansible/
+            
+        - name: Create setup marker
+          ansible.builtin.file:
+            path: /var/lib/ansible/setup-done
+            state: touch
+          when: not setup_done.stat.exists
+
+  handlers:
+    - name: Reload docker
+      ansible.builtin.systemd:
+        name: docker
+        state: reloaded

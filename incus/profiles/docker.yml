@@ -1,0 +1,47 @@
+name: docker
+description: Incus profile to run docker containers securely
+devices:
+  disk-device-1:
+    path: /secret
+    pool: default
+    source: hl-secret-volume
+    type: disk
+  disk-device-2:
+    path: /backup
+    pool: default
+    source: hl-backup-volume
+    type: disk
+  eth-1:
+    network: hlbr0
+    type: nic
+  root:
+    path: /
+    pool: default
+    size: 4GB
+    type: disk
+config:
+  limits.cpu: '1'
+  limits.memory: 512MB
+  limits.processes: '500'
+  security.nesting: 'true'
+  security.idmap.size: '655360'
+  security.idmap.isolated: 'false'
+  boot.autostart: 'true'
+  cloud-init.user-data: |-
+    #cloud-config
+    resize_rootfs: false
+    locale: en_US.UTF-8
+    timezone: "Europe/Budapest"
+    runcmd:
+      - [ wget, "https://raw.githubusercontent.com/zbalint/homelab/master/ansible/setup-container.yml", -O, "/run/setup-container.yml" ]
+      - [ ansible-playbook, /run/setup-container.yml ]
+  cloud-init.vendor-data: |-
+    #cloud-config
+    resize_rootfs: false
+    locale: en_US.UTF-8
+    timezone: "Europe/Budapest"
+    package_update: true
+    package_upgrade: true
+    packages:
+      - ansible
+project: default
