@@ -12,18 +12,6 @@
 
     - name: Initial setup block
       block:
-        - name: Add Docker GPG key
-          ansible.builtin.get_url:
-            url: https://download.docker.com/linux/debian/gpg
-            dest: /etc/apt/keyrings/docker.gpg
-            mode: '0644'
-
-        - name: Add Docker repository
-          ansible.builtin.apt_repository:
-            repo: "deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
-            filename: docker
-            state: present
-
         - name: Add gVisor GPG key
           ansible.builtin.get_url:
             url: https://gvisor.dev/archive.key
@@ -67,6 +55,18 @@
             enabled: true
             state: started
 
+        - name: Install Tailscale
+          ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
+          args:
+            creates: /usr/bin/tailscale
+
+        - name: Enable Tailscale auto-update
+          ansible.builtin.command: tailscale set --auto-update
+          changed_when: false
+
+        - name: Install Docker
+          ansible.builtin.shell: curl -fsSL https://get.docker.com | sh
+
         - name: Configure Docker to use gVisor
           ansible.builtin.copy:
             dest: /etc/docker/daemon.json
@@ -82,15 +82,6 @@
               }
             mode: '0644'
           notify: Reload docker
-
-        - name: Install Tailscale
-          ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
-          args:
-            creates: /usr/bin/tailscale
-
-        - name: Enable Tailscale auto-update
-          ansible.builtin.command: tailscale set --auto-update
-          changed_when: false
 
         - name: Ensure docker group exists
           ansible.builtin.group:
