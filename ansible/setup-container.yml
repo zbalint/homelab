@@ -40,11 +40,6 @@
               - curl
               - gnupg
               - runsc
-              - docker-ce
-              - docker-ce-cli
-              - containerd.io
-              - docker-buildx-plugin
-              - docker-compose-plugin
             update_cache: yes
         
         - name: Download nftables config from GitHub
