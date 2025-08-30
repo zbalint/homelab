@@ -12,17 +12,18 @@
 
     - name: Initial setup block
       block:
-        - name: Add gVisor repository
-          ansible.builtin.apt_repository:
-            repo: "deb [arch={{ ansible_architecture }} signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main"
-            filename: gvisor
-            state: present
 
         - name: Add gVisor GPG key
           ansible.builtin.get_url:
             url: https://gvisor.dev/archive.key
             dest: /usr/share/keyrings/gvisor-archive-keyring.gpg
             mode: '0644'
+
+        - name: Add gVisor repository
+          ansible.builtin.apt_repository:
+            repo: "deb [arch={{ ansible_architecture }} signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main"
+            filename: gvisor
+            state: present
 
         - name: Install required packages
           ansible.builtin.apt:
