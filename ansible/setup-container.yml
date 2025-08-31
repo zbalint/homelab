@@ -57,6 +57,8 @@
               - ca-certificates
               - curl
               - gnupg
+              - apparmor
+              - apparmor-utils
               - runsc
               - docker-ce
               - docker-ce-cli
