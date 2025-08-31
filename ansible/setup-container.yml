@@ -88,22 +88,6 @@
           ansible.builtin.command: tailscale set --auto-update
           changed_when: false
 
-        - name: Configure Docker to use gVisor
-          ansible.builtin.copy:
-            dest: /etc/docker/daemon.json
-            content: |
-              {
-                "default-runtime": "runsc",
-                "runtimes": {
-                  "runsc": {
-                    "path": "/usr/bin/runsc",
-                    "runtimeArgs": ["--platform=systrap"]
-                  }
-                }
-              }
-            mode: '0644'
-          notify: Reload docker
-
         - name: Ensure docker group exists
           ansible.builtin.group:
             name: docker
@@ -115,6 +99,27 @@
             uid: 4000
             groups: docker
             shell: /bin/bash
+
+        - name: Configure Docker to use gVisor
+          ansible.builtin.copy:
+            dest: /etc/docker/daemon.json
+            content: |
+              {
+                  "userns-remap": "tartarus",
+                  "iptables": false,
+                  "ip6tables": false,
+                  "default-runtime": "runsc",
+                  "runtimes": {
+                      "runsc": {
+                          "path": "/usr/local/bin/runsc",
+                          "runtimeArgs": [
+                              "--platform=systrap"
+                          ]
+                      }
+                  }
+              }
+            mode: '0644'
+          notify: Reload docker
 
         - name: Create Docker directories
           ansible.builtin.file:
