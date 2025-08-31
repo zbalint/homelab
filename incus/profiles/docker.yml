@@ -7,12 +7,12 @@ devices:
   root:
     path: /
     pool: default
-    size: 2GB
+    size: 4GB
     type: disk
 config:
   limits.cpu: '1'
   limits.memory: 512MB
-  limits.processes: '100'
+  limits.processes: '500'
   security.nesting: 'true'
   security.idmap.size: '655360'
   security.idmap.isolated: 'true'
