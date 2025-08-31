@@ -110,10 +110,16 @@
                   "userns-remap": "tartarus",
                   "iptables": false,
                   "ip6tables": false,
+                  "default-address-pools": [
+                      {
+                          "base": "172.30.0.0/16",
+                          "size": 24
+                      }
+                  ],
                   "default-runtime": "runsc",
                   "runtimes": {
                       "runsc": {
-                          "path": "/usr/bin/runsc",
+                          "path": "/usr/local/bin/runsc",
                           "runtimeArgs": [
                               "--platform=systrap"
                           ]
