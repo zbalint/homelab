@@ -83,6 +83,20 @@ function generate_random_string() {
     openssl rand -hex "${length}"
 }
 
+function encrypt_file() {
+    local plain_file="$1"
+    local encrypted_file="$2"
+    local key; key=$(read_file "${ENCRYPTION_KEY_FILE_PATH}")
+    openssl enc -chacha20 -pbkdf2 -iter 200000 -a -e -k "${key}" -in "${plain_file}" -out "${encrypted_file}"
+}
+
+function decrypt_file() {
+    local encrypted_file="$1"
+    local plain_file="$2"
+    local key; key=$(read_file "${ENCRYPTION_KEY_FILE_PATH}")
+    openssl enc -chacha20 -pbkdf2 -iter 200000 -a -d -k "${key}" -in "${encrypted_file}" -out "${plain_file}"
+}
+
 function encrypt_string() {
     local plain_text="$*"
     local key; key=$(read_file "${ENCRYPTION_KEY_FILE_PATH}")
@@ -95,9 +109,8 @@ function decrypt_string() {
     echo "${encrypted_text}" | openssl enc -chacha20 -pbkdf2 -iter 200000 -a -d -k "${key}"
 }
 
-function decrypt_file() {
+function decrypt_file_content() {
     local file="$1"
-    
 
     decrypt_string "$(read_file "${file}")"
 }
@@ -195,7 +208,7 @@ function download_discord_secret() {
 }
 
 function send_gotify_notification() {
-    local secret; secret="$(decrypt_file ${GOTIFY_SECRET_FILE_PATH})"
+    local secret; secret="$(decrypt_file_content ${GOTIFY_SECRET_FILE_PATH})"
     local title="$1"; shift
     local message="$*"
     local priority=5
@@ -214,9 +227,9 @@ function send_discord_notification() {
     local message
 
     if is_var_equals "${type}" "notif"; then
-        secret="$(decrypt_file ${DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH})"
+        secret="$(decrypt_file_content ${DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH})"
     elif is_var_equals "${type}" "secret"; then
-        secret="$(decrypt_file ${DISCORD_SECRETS_CHANNEL_SECRET_FILE_PATH})"
+        secret="$(decrypt_file_content ${DISCORD_SECRETS_CHANNEL_SECRET_FILE_PATH})"
     else
         echo "ERROR: Invalid Discord channel type!"
         return 1
@@ -385,5 +398,5 @@ function main() {
     return 0
 }
 
-init #&& \
+init && \
 main 
