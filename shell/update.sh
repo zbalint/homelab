@@ -2,8 +2,8 @@
 
 readonly CONTAINER_NAME="$(hostname)"
 
-# readonly CONFIG_DIR="/root"
-readonly CONFIG_DIR="/home/zbalint/.hl-test-config"
+readonly CONFIG_DIR="/root"
+# readonly CONFIG_DIR="/home/zbalint/.hl-test-config"
 readonly GLOBAL_SECRET_DIR="/secrets"
 readonly CONTAINER_SECRET_DIR="${CONFIG_DIR}/secrets"
 readonly ENCRYPTION_KEY_FILE="${GLOBAL_SECRET_DIR}/.encryption_key"
@@ -37,6 +37,10 @@ readonly DOCKER_USER="tartarus"
 readonly DOCKER_PROJECT_DIR="/tmp/docker/stacks/{project}"
 readonly DOCKER_PROJECT_FILE_PATH="${DOCKER_PROJECT_DIR}/docker-compose.yml"
 
+function init_config_dir() {
+    mkdir -p "${CONTAINER_SECRET_DIR}"
+}
+
 function read_file() {
     local file="$1"
 
@@ -48,13 +52,13 @@ function read_file() {
 function encrypt_string() {
     local plain_text="$*"
     local key; key=$(read_file "${ENCRYPTION_KEY_FILE}")
-    echo -n "${plain_text}" | openssl enc -chacha20 -pbkdf2 -a -e -k "${key}"
+    echo -n "${plain_text}" | openssl enc -chacha20 -pbkdf2 -iter 200000 -a -e -k "${key}"
 }
 
 function decrypt_string() {
     local encrypted_text="$*"
     local key; key=$(read_file "${ENCRYPTION_KEY_FILE}")
-    echo "${encrypted_text}" | openssl enc -chacha20 -pbkdf2 -a -d -k "${key}"
+    echo "${encrypted_text}" | openssl enc -chacha20 -pbkdf2 -iter 200000 -a -d -k "${key}"
 }
 
 function decrypt_file() {
@@ -221,12 +225,12 @@ function send_discord_notification() {
 }
 
 function init() {
+    init_config_dir
     download_discord_secret
 }
 
 function main() {
-    send_discord_notification "test notif enc"
- 
+    send_discord_notification "test notif from container"
     return 0
 }
 
