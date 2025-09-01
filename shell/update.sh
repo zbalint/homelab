@@ -9,7 +9,8 @@ readonly CONTAINER_SECRET_DIR="${CONFIG_DIR}/secrets"
 readonly ENCRYPTION_KEY_FILE_PATH="${GLOBAL_SECRET_DIR}/.encryption_key"
 readonly RESTIC_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.restic_secret"
 readonly GOTIFY_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.gotify_secret"
-readonly DISCORD_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_secret"
+readonly DISCORD_SECRETS_CHANNEL_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_secrets_channel_secret"
+readonly DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_notif_channel_secret"
 
 readonly RESTIC_VERSION="0.18.0"
 readonly RESTIC_ARCHIVE_URL="https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_amd64.bz2"
@@ -22,7 +23,8 @@ readonly GITHUB_DOCKER_DEFAULT_CONFIG_URL="${GITHUB_BASE_URL}/docker/daemon.json
 readonly GITHUB_DOCKER_CONFIG_URL="${GITHUB_BASE_URL}/docker/${CONTAINER_NAME}/daemon.json"
 readonly GITHUB_DOCKER_COMPOSE_FILE_URL="${GITHUB_BASE_URL}/docker/${CONTAINER_NAME}/docker-compose.yaml"
 readonly GITHUB_GOTIFY_SECRET_URL="${GITHUB_BASE_URL}/secret/.gotify_secret"
-readonly GITHUB_DISCORD_SECRET_URL="${GITHUB_BASE_URL}/secret/.discord_secret"
+readonly GITHUB_DISCORD_SECRETS_CHANNEL_SECRET_URL="${GITHUB_BASE_URL}/secret/.discord_notif_channel_secret"
+readonly GITHUB_DISCORD_NOTIF_CHANNEL_SECRET_URL="${GITHUB_BASE_URL}/secret/.discord_secrets_channel_secret"
 
 readonly FIREWALL_CONFIG_FILE_PATH="/etc/nftables.conf"
 readonly FIREWALL_BACKUP_FILE_PATH="/etc/nftables.conf.bak"
@@ -36,7 +38,8 @@ readonly DOCKER_PROJECT_DIR="/tmp/docker/stacks/{project}"
 readonly DOCKER_PROJECT_FILE_PATH="${DOCKER_PROJECT_DIR}/docker-compose.yml"
 
 declare GOTIFY_SECRET
-declare DISCORD_SECRET
+declare DISCORD_SECRETS_CHANNEL_SECRET
+declare DISCORD_NOFIY_CHANNEL_SECRET
 declare RESTIC_SECRET
 
 function init_config_dir() {
@@ -114,21 +117,34 @@ function download_from_github() {
     local github_url="$2"
 
     copy_file "${original_file_path}" "${backup_file_path}"
-    if ! download_file "${github_url}" "${original_file_path}"; then
+    if download_file "${github_url}" "${original_file_path}"; then
+        return 0
+    else
         copy_file "${backup_file_path}" "${original_file_path}"
+        return 1
     fi
+
+    return 1
 }
 
 function download_gotify_secret() {
     local encrypted_secret
     local decrypted_secret
 
-    download_from_github "${GOTIFY_SECRET_FILE_PATH}" "${GITHUB_GOTIFY_SECRET_URL}"
+    if download_from_github "${GOTIFY_SECRET_FILE_PATH}" "${GITHUB_GOTIFY_SECRET_URL}"; then
+        echo "INFO: Gotify secret successfully downloaded."
+    else
+        echo "WARN: Failed to download Gotify secret from github!"
+    fi
 
     if is_file_exists "${GOTIFY_SECRET_FILE_PATH}"; then
         encrypted_secret="$(read_file "${GOTIFY_SECRET_FILE_PATH}")"
         decrypted_secret="$(decrypt_string "${encrypted_secret}")"
         GOTIFY_SECRET="${decrypted_secret}"
+        return 0
+    else
+        echo "ERROR: Gotify secret file does not exists!"
+        return 1
     fi
 }
 
@@ -136,12 +152,46 @@ function download_discord_secret() {
     local encrypted_secret
     local decrypted_secret
 
-    download_from_github "${DISCORD_SECRET_FILE_PATH}" "${GITHUB_DISCORD_SECRET_URL}"
+    if download_from_github "${DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH}" "${GITHUB_DISCORD_NOTIF_CHANNEL_SECRET_URL}"; then
+        echo "INFO: Discord notif channel secret successfully downloaded."
+    else
+        echo "WARN: Failed to download Discord notif channel secret from github!"
+    fi
+    
+    if download_from_github "${DISCORD_SECRETS_CHANNEL_SECRET_FILE_PATH}" "${GITHUB_DISCORD_SECRETS_CHANNEL_SECRET_URL}"; then
+        echo "INFO: Discord secrets channel secret successfully downloaded."
+    else
+        echo "WARN: Failed to download Discord secrets channel secret from github!"
+    fi
+    
 
-    if is_file_exists "${DISCORD_SECRET_FILE_PATH}"; then
-        encrypted_secret="$(read_file "${DISCORD_SECRET_FILE_PATH}")"
+    if is_file_exists "${DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH}"; then
+        encrypted_secret="$(read_file "${DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH}")"
         decrypted_secret="$(decrypt_string "${encrypted_secret}")"
-        DISCORD_SECRET="${decrypted_secret}"
+        DISCORD_NOFIY_CHANNEL_SECRET="${decrypted_secret}"
+    else
+        echo "ERROR: Discord secrets channel secret file does not exists!"
+    fi
+
+    if is_file_exists "${DISCORD_SECRETS_CHANNEL_SECRET_FILE_PATH}"; then
+        encrypted_secret="$(read_file "${DISCORD_SECRETS_CHANNEL_SECRET_FILE_PATH}")"
+        decrypted_secret="$(decrypt_string "${encrypted_secret}")"
+        DISCORD_SECRETS_CHANNEL_SECRET="${decrypted_secret}"
+    else
+        echo "ERROR: Discord secrets channel secret file does not exists!"
+    fi
+    
+}
+
+function send_gotify_notification() {
+    local secret; secret="$(decrypt_file ${GOTIFY_SECRET_FILE_PATH})"
+    local title="$1"; shift
+    local message="$*"
+    local priority=5
+    local gotify_url="https://gotify.lab.escapethelan.com/message?token=${secret}"
+
+    if ! curl --insecure -m 10 --retry 2 "${gotify_url}" -F "title=${title}" -F "message=${message}" -F "priority=${priority}" > /dev/null 2>&1; then
+        echo "ERROR: Failed to send notification to the Gotify server!"
     fi
 }
 
@@ -275,15 +325,17 @@ function generate_restic_password() {
     local password; 
     local encrypted_password; 
     
-    if ! is_file_exists "${RESTIC_SECRET_FILE_PATH}"; then
+    if is_file_exists "${RESTIC_SECRET_FILE_PATH}"; then
+        echo "INFO: Loading restic secret into memory." 
+        encrypted_password="$(read_file "${RESTIC_SECRET_FILE_PATH}")"
+        password="$(decrypt_string "${encrypted_password}")"
+        RESTIC_SECRET="${password}"
+    else
+        echo "WARN: Generating new password for Restic repository..."
         password="$(generate_random_string ${password_length})"
         encrypted_password="$(encrypt_string "${password}")"
 
         write_file "${RESTIC_SECRET_FILE_PATH}" "${encrypted_password}"
-        RESTIC_SECRET="${password}"
-    else
-        encrypted_password="$(read_file "${RESTIC_SECRET_FILE_PATH}")"
-        password="$(decrypt_string "${encrypted_password}")"
         RESTIC_SECRET="${password}"
     fi
 }
@@ -306,5 +358,5 @@ function main() {
     return 0
 }
 
-# init && \
-# main "$1"
+# init #&& \
+# main 
