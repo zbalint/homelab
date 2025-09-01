@@ -7,8 +7,9 @@ readonly CONFIG_DIR="/home/zbalint/.hl-test-config"
 readonly GLOBAL_SECRET_DIR="/secrets"
 readonly CONTAINER_SECRET_DIR="${CONFIG_DIR}/secrets"
 readonly ENCRYPTION_KEY_FILE_PATH="${GLOBAL_SECRET_DIR}/.encryption_key"
-readonly DISCORD_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_secret"
 readonly RESTIC_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.restic_secret"
+readonly GOTIFY_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.gotify_secret"
+readonly DISCORD_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_secret"
 
 readonly RESTIC_VERSION="0.18.0"
 readonly RESTIC_ARCHIVE_URL="https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_amd64.bz2"
@@ -20,6 +21,7 @@ readonly GITHUB_FIREWALL_CONFIG_URL="${GITHUB_BASE_URL}/firewall/${CONTAINER_NAM
 readonly GITHUB_DOCKER_DEFAULT_CONFIG_URL="${GITHUB_BASE_URL}/docker/daemon.json"
 readonly GITHUB_DOCKER_CONFIG_URL="${GITHUB_BASE_URL}/docker/${CONTAINER_NAME}/daemon.json"
 readonly GITHUB_DOCKER_COMPOSE_FILE_URL="${GITHUB_BASE_URL}/docker/${CONTAINER_NAME}/docker-compose.yaml"
+readonly GITHUB_GOTIFY_SECRET_URL="${GITHUB_BASE_URL}/secret/.gotify_secret"
 readonly GITHUB_DISCORD_SECRET_URL="${GITHUB_BASE_URL}/secret/.discord_secret"
 
 readonly FIREWALL_CONFIG_FILE_PATH="/etc/nftables.conf"
@@ -33,6 +35,7 @@ readonly DOCKER_USER="tartarus"
 readonly DOCKER_PROJECT_DIR="/tmp/docker/stacks/{project}"
 readonly DOCKER_PROJECT_FILE_PATH="${DOCKER_PROJECT_DIR}/docker-compose.yml"
 
+declare GOTIFY_SECRET
 declare DISCORD_SECRET
 declare RESTIC_SECRET
 
@@ -105,14 +108,35 @@ function create_dir() {
     mkdir -p "${dir}" >/dev/null 2>&1 && chown ${DOCKER_USER}:${DOCKER_USER} "${dir}" >/dev/null 2>&1
 }
 
+function download_from_github() {
+    local original_file_path="$1"
+    local backup_file_path="${original_file_path}.bak"
+    local github_url="$2"
+
+    copy_file "${original_file_path}" "${backup_file_path}"
+    if ! download_file "${github_url}" "${original_file_path}"; then
+        copy_file "${backup_file_path}" "${original_file_path}"
+    fi
+}
+
+function download_gotify_secret() {
+    local encrypted_secret
+    local decrypted_secret
+
+    download_from_github "${GOTIFY_SECRET_FILE_PATH}" "${GITHUB_GOTIFY_SECRET_URL}"
+
+    if is_file_exists "${GOTIFY_SECRET_FILE_PATH}"; then
+        encrypted_secret="$(read_file "${GOTIFY_SECRET_FILE_PATH}")"
+        decrypted_secret="$(decrypt_string "${encrypted_secret}")"
+        GOTIFY_SECRET="${decrypted_secret}"
+    fi
+}
+
 function download_discord_secret() {
     local encrypted_secret
     local decrypted_secret
 
-    copy_file "${DISCORD_SECRET_FILE_PATH}" "${DISCORD_SECRET_FILE_PATH}.bak"
-    if ! download_file "${GITHUB_DISCORD_SECRET_URL}" "${DISCORD_SECRET_FILE_PATH}"; then
-        copy_file "${DISCORD_SECRET_FILE_PATH}.bak" "${DISCORD_SECRET_FILE_PATH}"
-    fi
+    download_from_github "${DISCORD_SECRET_FILE_PATH}" "${GITHUB_DISCORD_SECRET_URL}"
 
     if is_file_exists "${DISCORD_SECRET_FILE_PATH}"; then
         encrypted_secret="$(read_file "${DISCORD_SECRET_FILE_PATH}")"
@@ -272,6 +296,7 @@ function init_restic_repository() {
 
 function init() {
     init_config_dir
+    download_gotify_secret
     download_discord_secret
     generate_restic_password
 }
@@ -281,5 +306,5 @@ function main() {
     return 0
 }
 
-init && \
-main "$1"
+# init && \
+# main "$1"
