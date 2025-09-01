@@ -86,7 +86,7 @@ function generate_random_string() {
 function encrypt_string() {
     local plain_text="$*"
     local key; key=$(read_file "${ENCRYPTION_KEY_FILE_PATH}")
-    echo -n "${plain_text}" | openssl enc -chacha20 -pbkdf2 -iter 200000 -a -e -k "${key}"
+    echo -n "${plain_text}" | openssl enc -chacha20 -pbkdf2 -iter 200000 -a -e -k "${key}" | base64 -d | base64 -w 0
 }
 
 function decrypt_string() {
@@ -227,7 +227,8 @@ function send_discord_notification() {
     message="$*"
 
     if  [ -n "${secret}" ]; then
-        curl -H "${content_type}" -X POST -d "{\"content\":\"${message}\"}" "${discord_url}" >/dev/null 2>&1
+        echo curl -H "${content_type}" -X POST -d "{\"content\":"\'${message}\'"}" "${discord_url}" #>/dev/null 2>&1
+        curl -H "${content_type}" -X POST -d "{\"content\":\"${message}\"}" "${discord_url}" #>/dev/null 2>&1
     fi
 }
 
@@ -362,6 +363,8 @@ function generate_restic_password() {
 
         write_file "${RESTIC_SECRET_FILE_PATH}" "${encrypted_password}"
         RESTIC_SECRET="${password}"
+
+        send_discord_notification "secret" "Container: ${CONTAINER_NAME}\nSECRET: ${encrypted_password}"
     fi
 }
 
@@ -379,8 +382,6 @@ function init() {
 }
 
 function main() {
-    send_discord_notification "notif" "test msg"
-    send_discord_notification "secret" "secret msg"
     return 0
 }
 
