@@ -51,6 +51,7 @@
         - name: Install required packages
           ansible.builtin.apt:
             name:
+              - bzip2
               - nftables
               - unattended-upgrades
               - apt-config-auto-update
