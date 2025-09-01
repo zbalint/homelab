@@ -2,20 +2,17 @@
 
 readonly CONTAINER_NAME="$(hostname)"
 
-readonly CONFIG_DIR="/root"
-# readonly CONFIG_DIR="/home/zbalint/.hl-test-config"
+# readonly CONFIG_DIR="/root"
+readonly CONFIG_DIR="/home/zbalint/.hl-test-config"
 readonly GLOBAL_SECRET_DIR="/secrets"
 readonly CONTAINER_SECRET_DIR="${CONFIG_DIR}/secrets"
-readonly ENCRYPTION_KEY_FILE="${GLOBAL_SECRET_DIR}/.encryption_key"
-readonly DISCORD_SECRET_FILE="${CONTAINER_SECRET_DIR}/.discord_secret"
-readonly RESTIC_SECRET_FILE="${CONTAINER_SECRET_DIR}/.restic_secret"
-
-
+readonly ENCRYPTION_KEY_FILE_PATH="${GLOBAL_SECRET_DIR}/.encryption_key"
+readonly DISCORD_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_secret"
+readonly RESTIC_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.restic_secret"
 
 readonly RESTIC_VERSION="0.18.0"
 readonly RESTIC_ARCHIVE_URL="https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_amd64.bz2"
 readonly RESTIC_REPOSITORY_PATH="/backup/${CONTAINER_NAME}"
-
 
 readonly GITHUB_BASE_URL="https://raw.githubusercontent.com/zbalint/homelab/master"
 readonly GITHUB_FIREWALL_DEFAULT_CONFIG_URL="${GITHUB_BASE_URL}/firewall/nftables.conf"
@@ -24,7 +21,6 @@ readonly GITHUB_DOCKER_DEFAULT_CONFIG_URL="${GITHUB_BASE_URL}/docker/daemon.json
 readonly GITHUB_DOCKER_CONFIG_URL="${GITHUB_BASE_URL}/docker/${CONTAINER_NAME}/daemon.json"
 readonly GITHUB_DOCKER_COMPOSE_FILE_URL="${GITHUB_BASE_URL}/docker/${CONTAINER_NAME}/docker-compose.yaml"
 readonly GITHUB_DISCORD_SECRET_URL="${GITHUB_BASE_URL}/secret/.discord_secret"
-
 
 readonly FIREWALL_CONFIG_FILE_PATH="/etc/nftables.conf"
 readonly FIREWALL_BACKUP_FILE_PATH="/etc/nftables.conf.bak"
@@ -37,27 +33,48 @@ readonly DOCKER_USER="tartarus"
 readonly DOCKER_PROJECT_DIR="/tmp/docker/stacks/{project}"
 readonly DOCKER_PROJECT_FILE_PATH="${DOCKER_PROJECT_DIR}/docker-compose.yml"
 
+declare DISCORD_SECRET
+declare RESTIC_SECRET
+
 function init_config_dir() {
     mkdir -p "${CONTAINER_SECRET_DIR}"
+}
+
+function is_file_exists() {
+    local file="$1"
+
+    test -f "${file}"
 }
 
 function read_file() {
     local file="$1"
 
-    if test -f "${file}"; then
+    if is_file_exists "${file}"; then
         cat "${file}"
     fi
 }
 
+function write_file() {
+    local file="$1"
+    local content="$2"
+
+    echo -n "${content}" > "${file}"
+}
+
+function generate_random_string() {
+    local length="$1"
+    openssl rand -hex "${length}"
+}
+
 function encrypt_string() {
     local plain_text="$*"
-    local key; key=$(read_file "${ENCRYPTION_KEY_FILE}")
+    local key; key=$(read_file "${ENCRYPTION_KEY_FILE_PATH}")
     echo -n "${plain_text}" | openssl enc -chacha20 -pbkdf2 -iter 200000 -a -e -k "${key}"
 }
 
 function decrypt_string() {
     local encrypted_text="$*"
-    local key; key=$(read_file "${ENCRYPTION_KEY_FILE}")
+    local key; key=$(read_file "${ENCRYPTION_KEY_FILE_PATH}")
     echo "${encrypted_text}" | openssl enc -chacha20 -pbkdf2 -iter 200000 -a -d -k "${key}"
 }
 
@@ -86,6 +103,33 @@ function create_dir() {
     local dir="$1"
 
     mkdir -p "${dir}" >/dev/null 2>&1 && chown ${DOCKER_USER}:${DOCKER_USER} "${dir}" >/dev/null 2>&1
+}
+
+function download_discord_secret() {
+    local encrypted_secret
+    local decrypted_secret
+
+    copy_file "${DISCORD_SECRET_FILE_PATH}" "${DISCORD_SECRET_FILE_PATH}.bak"
+    if ! download_file "${GITHUB_DISCORD_SECRET_URL}" "${DISCORD_SECRET_FILE_PATH}"; then
+        copy_file "${DISCORD_SECRET_FILE_PATH}.bak" "${DISCORD_SECRET_FILE_PATH}"
+    fi
+
+    if is_file_exists "${DISCORD_SECRET_FILE_PATH}"; then
+        encrypted_secret="$(read_file "${DISCORD_SECRET_FILE_PATH}")"
+        decrypted_secret="$(decrypt_string "${encrypted_secret}")"
+        DISCORD_SECRET="${decrypted_secret}"
+    fi
+}
+
+function send_discord_notification() {
+    local secret; secret="$(decrypt_file ${DISCORD_SECRET_FILE_PATH})"
+    local discord_url="https://discord.com/api/webhooks/${secret}"
+    local content_type="Content-Type: application/json"
+    local message="$*"
+
+    if  [ -n "${secret}" ]; then
+        curl -H "${content_type}" -X POST -d "{\"content\":\"${message}\"}" "${discord_url}" >/dev/null 2>&1
+    fi
 }
 
 function backup_firewall_config() {
@@ -152,13 +196,6 @@ function update_docker_config() {
     fi
 }
 
-function download_discord_secret() {
-    copy_file "${DISCORD_SECRET_FILE}" "${DISCORD_SECRET_FILE}.bak"
-    if ! download_file "${GITHUB_DISCORD_SECRET_URL}" "${DISCORD_SECRET_FILE}"; then
-        copy_file "${DISCORD_SECRET_FILE}.bak" "${DISCORD_SECRET_FILE}"
-    fi
-}
-
 function get_project_name() {
     # local hostname="${CONTAINER_NAME}"
     local hostname="lxc-traefik-01"
@@ -209,28 +246,38 @@ function install_restic_archive() {
     fi
 }
 
+function generate_restic_password() {
+    local password_length=32
+    local password; 
+    local encrypted_password; 
+    
+    if ! is_file_exists "${RESTIC_SECRET_FILE_PATH}"; then
+        password="$(generate_random_string ${password_length})"
+        encrypted_password="$(encrypt_string "${password}")"
+
+        write_file "${RESTIC_SECRET_FILE_PATH}" "${encrypted_password}"
+        RESTIC_SECRET="${password}"
+    else
+        encrypted_password="$(read_file "${RESTIC_SECRET_FILE_PATH}")"
+        password="$(decrypt_string "${encrypted_password}")"
+        RESTIC_SECRET="${password}"
+    fi
+}
+
 function init_restic_repository() {
     RESTIC_REPOSITORY="${RESTIC_REPOSITORY_PATH}" RESTIC_PASSWORD="${repository_password}" restic --verbose init
 }
 
-function send_discord_notification() {
-    local secret; secret="$(decrypt_file ${DISCORD_SECRET_FILE})"
-    local discord_url="https://discord.com/api/webhooks/${secret}"
-    local content_type="Content-Type: application/json"
-    local message="$*"
 
-    if  [ -n "${secret}" ]; then
-        curl -H "${content_type}" -X POST -d "{\"content\":\"${message}\"}" "${discord_url}" >/dev/null 2>&1
-    fi
-}
 
 function init() {
     init_config_dir
     download_discord_secret
+    generate_restic_password
 }
 
 function main() {
-    send_discord_notification "test notif from container"
+    send_discord_notification "test test"
     return 0
 }
 
