@@ -23,8 +23,8 @@ readonly GITHUB_DOCKER_DEFAULT_CONFIG_URL="${GITHUB_BASE_URL}/docker/daemon.json
 readonly GITHUB_DOCKER_CONFIG_URL="${GITHUB_BASE_URL}/docker/${CONTAINER_NAME}/daemon.json"
 readonly GITHUB_DOCKER_COMPOSE_FILE_URL="${GITHUB_BASE_URL}/docker/${CONTAINER_NAME}/docker-compose.yaml"
 readonly GITHUB_GOTIFY_SECRET_URL="${GITHUB_BASE_URL}/secret/.gotify_secret"
-readonly GITHUB_DISCORD_SECRETS_CHANNEL_SECRET_URL="${GITHUB_BASE_URL}/secret/.discord_notif_channel_secret"
-readonly GITHUB_DISCORD_NOTIF_CHANNEL_SECRET_URL="${GITHUB_BASE_URL}/secret/.discord_secrets_channel_secret"
+readonly GITHUB_DISCORD_NOTIF_CHANNEL_SECRET_URL="${GITHUB_BASE_URL}/secret/.discord_notif_channel_secret"
+readonly GITHUB_DISCORD_SECRETS_CHANNEL_SECRET_URL="${GITHUB_BASE_URL}/secret/.discord_secrets_channel_secret"
 
 readonly FIREWALL_CONFIG_FILE_PATH="/etc/nftables.conf"
 readonly FIREWALL_BACKUP_FILE_PATH="/etc/nftables.conf.bak"
@@ -41,6 +41,17 @@ declare GOTIFY_SECRET
 declare DISCORD_SECRETS_CHANNEL_SECRET
 declare DISCORD_NOFIY_CHANNEL_SECRET
 declare RESTIC_SECRET
+
+function is_var_equals() {
+    local var="$1"
+    local str="$2"
+
+    if [ "${var}" == "${str}" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
 
 function init_config_dir() {
     mkdir -p "${CONTAINER_SECRET_DIR}"
@@ -196,10 +207,24 @@ function send_gotify_notification() {
 }
 
 function send_discord_notification() {
-    local secret; secret="$(decrypt_file ${DISCORD_SECRET_FILE_PATH})"
-    local discord_url="https://discord.com/api/webhooks/${secret}"
-    local content_type="Content-Type: application/json"
-    local message="$*"
+    local type="$1"; shift
+    local secret
+    local discord_url
+    local content_type
+    local message
+
+    if is_var_equals "${type}" "notif"; then
+        secret="$(decrypt_file ${DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH})"
+    elif is_var_equals "${type}" "secret"; then
+        secret="$(decrypt_file ${DISCORD_SECRETS_CHANNEL_SECRET_FILE_PATH})"
+    else
+        echo "ERROR: Invalid Discord channel type!"
+        return 1
+    fi
+    
+    discord_url="https://discord.com/api/webhooks/${secret}"
+    content_type="Content-Type: application/json"
+    message="$*"
 
     if  [ -n "${secret}" ]; then
         curl -H "${content_type}" -X POST -d "{\"content\":\"${message}\"}" "${discord_url}" >/dev/null 2>&1
@@ -354,9 +379,10 @@ function init() {
 }
 
 function main() {
-    send_discord_notification "test test"
+    send_discord_notification "notif" "test msg"
+    send_discord_notification "secret" "secret msg"
     return 0
 }
 
-# init #&& \
-# main 
+init #&& \
+main 
