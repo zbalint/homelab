@@ -399,7 +399,12 @@ function generate_gocryptfs_password() {
 }
 
 function init_gocryptfs() {
-    echo "${GOCRYPTFS_SECRET}" | gocryptfs -init "${GOCRYPTFS_CIPER_DIR_PATH}"
+    if echo "${GOCRYPTFS_SECRET}" | gocryptfs -init "${GOCRYPTFS_CIPER_DIR_PATH}"; then
+        echo "INFO: Gocryptfs mount initialized."
+    else
+        echo "ERROR: Could not initialize gocryptfs volume!"
+        return 1
+    fi
 }
 
 function mount_gocryptfs_volume() {

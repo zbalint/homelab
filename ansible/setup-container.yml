@@ -52,6 +52,7 @@
           ansible.builtin.apt:
             name:
               - bzip2
+              - rsync
               - nftables
               - unattended-upgrades
               - apt-config-auto-update
