@@ -240,8 +240,7 @@ function send_discord_notification() {
     message="$*"
 
     if  [ -n "${secret}" ]; then
-        echo curl -H "${content_type}" -X POST -d "{\"content\":"\'${message}\'"}" "${discord_url}" #>/dev/null 2>&1
-        curl -H "${content_type}" -X POST -d "{\"content\":\"${message}\"}" "${discord_url}" #>/dev/null 2>&1
+        curl -H "${content_type}" -X POST -d "{\"content\":\"${message}\"}" "${discord_url}" >/dev/null 2>&1
     fi
 }
 
@@ -319,33 +318,6 @@ function get_project_name() {
     echo "${container_name}"
 }
 
-function backup_docker_compose() {
-    local project; project=$(get_project_name)
-    local project_dir="${DOCKER_PROJECT_DIR/"{project}"/"${project}"}"
-    local project_path="${DOCKER_PROJECT_FILE_PATH/"{project}"/"${project}"}"
-    local backup_path="${project_dir}/docker-compose.yml.bak"
-    
-    copy_file ${project_path} ${backup_path}
-}
-
-function restore_docker_compose() {
-    local project; project=$(get_project_name)
-    local project_dir="${DOCKER_PROJECT_DIR/"{project}"/"${project}"}"
-    local project_path="${DOCKER_PROJECT_FILE_PATH/"{project}"/"${project}"}"
-    local backup_path="${project_dir}/docker-compose.yml.bak"
-    
-    copy_file ${backup_path} ${project_path}
-}
-
-function download_docker_compose() {
-    local project; project=$(get_project_name)
-    local project_url="${GITHUB_DOCKER_COMPOSE_FILE_URL}"
-    local project_dir="${DOCKER_PROJECT_DIR/"{project}"/"${project}"}"
-    local project_path="${DOCKER_PROJECT_FILE_PATH/"{project}"/"${project}"}"
-
-    create_dir "${project_dir}" && download_file "${project_url}" "${project_path}"
-}
-
 
 function install_restic_archive() {
     if restic version >/dev/null 2>&1; then
@@ -380,11 +352,6 @@ function generate_restic_password() {
         send_discord_notification "secret" "Container: ${CONTAINER_NAME}\nSECRET: ${encrypted_password}"
     fi
 }
-
-function init_restic_repository() {
-    RESTIC_REPOSITORY="${RESTIC_REPOSITORY_PATH}" RESTIC_PASSWORD="${repository_password}" restic --verbose init
-}
-
 
 
 function init() {
