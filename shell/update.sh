@@ -7,19 +7,17 @@ readonly CONFIG_DIR="/root"
 readonly GLOBAL_SECRET_DIR="/secrets"
 readonly CONTAINER_SECRET_DIR="${CONFIG_DIR}/secrets"
 readonly ENCRYPTION_KEY_FILE_PATH="${GLOBAL_SECRET_DIR}/.encryption_key"
-readonly GOCRYPTFS_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.restic_secret"
+readonly GOCRYPTFS_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.gocryptfs_secret"
 readonly GOTIFY_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.gotify_secret"
 readonly DISCORD_SECRETS_CHANNEL_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_secrets_channel_secret"
 readonly DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_notif_channel_secret"
 
-readonly RESTIC_VERSION="0.18.0"
-readonly RESTIC_ARCHIVE_URL="https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_amd64.bz2"
-readonly RESTIC_REPOSITORY_PATH="/backup/${CONTAINER_NAME}"
-
 readonly GOCRYPTFS_VERSION="2.6.1"
 readonly GOCRYPTFS_ARCHIVE_URL="https://github.com/rfjakob/gocryptfs/releases/download/v${GOCRYPTFS_VERSION}/gocryptfs_v${GOCRYPTFS_VERSION}_linux-static_amd64.tar.gz"
 readonly GOCRYPTFS_PLAIN_DIR_PATH="/opt/docker"
-readonly GOCRYPTFS_CIPER_DIR_PATH="/backup/${CONTAINER_NAME}"
+readonly GOCRYPTFS_CIPER_DIR_PATH="/opt/cipher"
+readonly GOCRYPTFS_BACKUP_DIR_PATH="/backup/${CONTAINER_NAME}"
+readonly GOCRYPTFS_RESTORE_DIR_PATH="/opt/restore"
 
 readonly GITHUB_BASE_URL="https://raw.githubusercontent.com/zbalint/homelab/master"
 readonly GITHUB_FIREWALL_DEFAULT_CONFIG_URL="${GITHUB_BASE_URL}/firewall/nftables.conf"
@@ -58,14 +56,16 @@ function is_var_equals() {
     fi
 }
 
-function init_config_dir() {
-    mkdir -p "${CONTAINER_SECRET_DIR}"
-}
-
 function is_file_exists() {
     local file="$1"
 
     test -f "${file}"
+}
+
+function is_dir_exists() {
+    local dir="$1"
+
+    test -d "${dir}"
 }
 
 function read_file() {
@@ -81,6 +81,12 @@ function write_file() {
     local content="$2"
 
     echo -n "${content}" > "${file}"
+}
+
+function init_config_dir() {
+    if ! is_dir_exists "${CONTAINER_SECRET_DIR}"; then
+        mkdir -p "${CONTAINER_SECRET_DIR}" &&  chmod 700 "${CONTAINER_SECRET_DIR}"
+    fi
 }
 
 function generate_random_string() {
@@ -335,7 +341,7 @@ function install_gocryptfs() {
             chmod 700 /usr/bin/gocryptfs >/dev/null 2>&1 && \
             chmod 700 /usr/bin/gocryptfs-xray >/dev/null 2>&1 && \
             rm -rf "${extract_path}"
-            
+
             if gocryptfs -version >/dev/null 2>&1; then
                 echo "INFO: Gocryptfs successfully installed."
                 return 0
@@ -351,16 +357,22 @@ function install_gocryptfs() {
     fi
 }
 
-
-function install_restic_archive() {
-    if restic version >/dev/null 2>&1; then
-        restic self-update >/dev/null 2>&1
-    else
-        wget -q "${RESTIC_ARCHIVE_URL}" -O /tmp/restic.bz2 && \
-        bzip2 -d /tmp/restic.bz2 && \
-        mv /tmp/restic /usr/bin/restic && \
-        chmod +x /usr/bin/restic && \
-        restic self-update >/dev/null 2>&1
+function init_gocryptfs_dirs() {
+    if ! is_dir_exists "${GOCRYPTFS_CIPER_DIR_PATH}"; then
+        echo "INFO: Createing gocryptfs ciper dir at ${GOCRYPTFS_CIPER_DIR_PATH}"
+        mkdir -p "${GOCRYPTFS_CIPER_DIR_PATH}" && chmod 700 "${GOCRYPTFS_CIPER_DIR_PATH}"
+    fi
+    if ! is_dir_exists "${GOCRYPTFS_PLAIN_DIR_PATH}"; then
+        echo "INFO: Createing gocryptfs plain dir at ${GOCRYPTFS_PLAIN_DIR_PATH}"
+        mkdir -p "${GOCRYPTFS_PLAIN_DIR_PATH}"
+    fi
+    if ! is_dir_exists "${GOCRYPTFS_BACKUP_DIR_PATH}"; then
+        echo "INFO: Createing gocryptfs backup dir at ${GOCRYPTFS_BACKUP_DIR_PATH}"
+        mkdir -p "${GOCRYPTFS_BACKUP_DIR_PATH}" && chmod 700 "${GOCRYPTFS_CIPER_DIR_PATH}"
+    fi
+    if ! is_dir_exists "${GOCRYPTFS_RESTORE_DIR_PATH}"; then
+        echo "INFO: Createing gocryptfs restore dir at ${GOCRYPTFS_RESTORE_DIR_PATH}"
+        mkdir -p "${GOCRYPTFS_RESTORE_DIR_PATH}" && chmod 700 "${GOCRYPTFS_CIPER_DIR_PATH}"
     fi
 }
 
@@ -386,9 +398,21 @@ function generate_gocryptfs_password() {
     fi
 }
 
+function init_gocryptfs() {
+    echo "${GOCRYPTFS_SECRET}" | gocryptfs -init "${GOCRYPTFS_CIPER_DIR_PATH}"
+}
+
+function mount_gocryptfs_volume() {
+    echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${GOCRYPTFS_PLAIN_DIR_PATH}" "${GOCRYPTFS_CIPER_DIR_PATH}"
+}
+
+function umount_gocryptfs_volume() {
+    umount "${GOCRYPTFS_CIPER_DIR_PATH}"
+}
 
 function init() {
     init_config_dir
+    init_gocryptfs_dirs
     install_gocryptfs
     download_gotify_secret
     download_discord_secret
