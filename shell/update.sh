@@ -2,12 +2,12 @@
 
 readonly CONTAINER_NAME="$(hostname)"
 
-# readonly CONFIG_DIR="/root"
-readonly CONFIG_DIR="/home/zbalint/.hl-test-config"
+readonly CONFIG_DIR="/root"
+# readonly CONFIG_DIR="/home/zbalint/.hl-test-config"
 readonly GLOBAL_SECRET_DIR="/secrets"
 readonly CONTAINER_SECRET_DIR="${CONFIG_DIR}/secrets"
 readonly ENCRYPTION_KEY_FILE_PATH="${GLOBAL_SECRET_DIR}/.encryption_key"
-readonly RESTIC_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.restic_secret"
+readonly GOCRYPTFS_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.restic_secret"
 readonly GOTIFY_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.gotify_secret"
 readonly DISCORD_SECRETS_CHANNEL_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_secrets_channel_secret"
 readonly DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_notif_channel_secret"
@@ -15,6 +15,11 @@ readonly DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discor
 readonly RESTIC_VERSION="0.18.0"
 readonly RESTIC_ARCHIVE_URL="https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_amd64.bz2"
 readonly RESTIC_REPOSITORY_PATH="/backup/${CONTAINER_NAME}"
+
+readonly GOCRYPTFS_VERSION="2.6.1"
+readonly GOCRYPTFS_ARCHIVE_URL="https://github.com/rfjakob/gocryptfs/releases/download/v${GOCRYPTFS_VERSION}/gocryptfs_v${GOCRYPTFS_VERSION}_linux-static_amd64.tar.gz"
+readonly GOCRYPTFS_PLAIN_DIR_PATH="/opt/docker"
+readonly GOCRYPTFS_CIPER_DIR_PATH="/backup/${CONTAINER_NAME}"
 
 readonly GITHUB_BASE_URL="https://raw.githubusercontent.com/zbalint/homelab/master"
 readonly GITHUB_FIREWALL_DEFAULT_CONFIG_URL="${GITHUB_BASE_URL}/firewall/nftables.conf"
@@ -40,7 +45,7 @@ readonly DOCKER_PROJECT_FILE_PATH="${DOCKER_PROJECT_DIR}/docker-compose.yml"
 declare GOTIFY_SECRET
 declare DISCORD_SECRETS_CHANNEL_SECRET
 declare DISCORD_NOFIY_CHANNEL_SECRET
-declare RESTIC_SECRET
+declare GOCRYPTFS_SECRET
 
 function is_var_equals() {
     local var="$1"
@@ -318,6 +323,34 @@ function get_project_name() {
     echo "${container_name}"
 }
 
+function install_gocryptfs() {
+    if ! gocryptfs -version >/dev/null 2>&1; then
+        local archive_path="/tmp/gocryptfs.tar.gz"
+        local extract_path="/tmp/gocryptfs"
+        if wget -q "${GOCRYPTFS_ARCHIVE_URL}" -O "${archive_path}" && is_file_exists "${archive_path}"; then
+            mkdir "${extract_path}" >/dev/null 2>&1 && \
+            tar -xvf "${archive_path}" -C "${extract_path}" >/dev/null 2>&1 && \
+            mv "${extract_path}/gocryptfs" /usr/bin/gocryptfs >/dev/null 2>&1 && \
+            mv "${extract_path}/gocryptfs-xray" /usr/bin/gocryptfs-xray >/dev/null 2>&1 && \
+            chmod 700 /usr/bin/gocryptfs >/dev/null 2>&1 && \
+            chmod 700 /usr/bin/gocryptfs-xray >/dev/null 2>&1 && \
+            rm -rf "${extract_path}"
+            
+            if gocryptfs -version >/dev/null 2>&1; then
+                echo "INFO: Gocryptfs successfully installed."
+                return 0
+            else
+                echo "FATAL: Could not install gocryptfs"
+                return 1
+            fi
+            
+        else
+            echo "ERROR: Could not download gocryptfs!"
+            return 1
+        fi
+    fi
+}
+
 
 function install_restic_archive() {
     if restic version >/dev/null 2>&1; then
@@ -331,23 +364,23 @@ function install_restic_archive() {
     fi
 }
 
-function generate_restic_password() {
+function generate_gocryptfs_password() {
     local password_length=32
     local password; 
     local encrypted_password; 
     
-    if is_file_exists "${RESTIC_SECRET_FILE_PATH}"; then
-        echo "INFO: Loading restic secret into memory." 
-        encrypted_password="$(read_file "${RESTIC_SECRET_FILE_PATH}")"
+    if is_file_exists "${GOCRYPTFS_SECRET_FILE_PATH}"; then
+        echo "INFO: Loading gocryptfs secret into memory." 
+        encrypted_password="$(read_file "${GOCRYPTFS_SECRET_FILE_PATH}")"
         password="$(decrypt_string "${encrypted_password}")"
-        RESTIC_SECRET="${password}"
+        GOCRYPTFS_SECRET="${password}"
     else
-        echo "WARN: Generating new password for Restic repository..."
+        echo "WARN: Generating new password for gocryptfs folder..."
         password="$(generate_random_string ${password_length})"
         encrypted_password="$(encrypt_string "${password}")"
 
-        write_file "${RESTIC_SECRET_FILE_PATH}" "${encrypted_password}"
-        RESTIC_SECRET="${password}"
+        write_file "${GOCRYPTFS_SECRET_FILE_PATH}" "${encrypted_password}"
+        GOCRYPTFS_SECRET="${password}"
 
         send_discord_notification "secret" "Container: ${CONTAINER_NAME}\nSECRET: ${encrypted_password}"
     fi
@@ -356,9 +389,10 @@ function generate_restic_password() {
 
 function init() {
     init_config_dir
+    install_gocryptfs
     download_gotify_secret
     download_discord_secret
-    generate_restic_password
+    generate_gocryptfs_password
 }
 
 function main() {
