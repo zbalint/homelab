@@ -68,6 +68,16 @@ function is_dir_exists() {
     test -d "${dir}"
 }
 
+function is_dir_mounted() {
+    local directory="$1"
+
+    if mountpoint -q "${directory}"; then
+        return 0
+    fi
+
+    return 1
+}
+
 function read_file() {
     local file="$1"
 
@@ -399,32 +409,117 @@ function generate_gocryptfs_password() {
 }
 
 function init_gocryptfs() {
-    if echo "${GOCRYPTFS_SECRET}" | gocryptfs -init "${GOCRYPTFS_CIPER_DIR_PATH}"; then
-        echo "INFO: Gocryptfs mount initialized."
+    if is_file_exists "${GOCRYPTFS_PLAIN_DIR_PATH}/.gocryptfs.reverse.conf"; then
+        echo "INFO: Gocryptfs reverse volume found at ${GOCRYPTFS_PLAIN_DIR_PATH}"
+        return 0
+    fi
+
+    if echo "${GOCRYPTFS_SECRET}" | gocryptfs -init -reverse "${GOCRYPTFS_PLAIN_DIR_PATH}"; then
+        echo "INFO: Gocryptfs reverse volume initialized at ${GOCRYPTFS_PLAIN_DIR_PATH}"
+        return 0
     else
-        echo "ERROR: Could not initialize gocryptfs volume!"
+        echo "ERROR: Could not initialize gocryptfs  at ${GOCRYPTFS_PLAIN_DIR_PATH}!"
         return 1
     fi
 }
 
 function mount_gocryptfs_volume() {
-    echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${GOCRYPTFS_PLAIN_DIR_PATH}" "${GOCRYPTFS_CIPER_DIR_PATH}"
+    local mode="$1"
+    local plain_dir="$2"
+    local ciper_dir="$3"
+
+    if is_var_equals "${mode}" "normal"; then
+        if is_dir_mounted "${plain_dir}"; then
+            echo "WARN: Gocrypfs plain dir already mounted at ${plain_dir}"
+        else
+            echo "INFO: Gocrypfs ciper dir ${ciper_dir} mounted as plain dir at ${plain_dir}"
+            echo "${GOCRYPTFS_SECRET}" | gocryptfs "${ciper_dir}" "${plain_dir}"
+        fi
+    elif is_var_equals "${mode}" "reverse"; then
+        if is_dir_mounted "${ciper_dir}"; then
+            echo "WARN: Gocrypfs ciper dir already mounted at ${ciper_dir}"
+        else
+            echo "INFO: Gocrypfs plain dir ${plain_dir} mounted as ciper dir at ${ciper_dir}"
+            echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${plain_dir}" "${ciper_dir}"
+        fi
+    else
+        echo "ERROR: Invalid gocryptfs mount mode!"
+        return 1
+    fi
+
+    # if is_dir_mounted "${GOCRYPTFS_CIPER_DIR_PATH}"; then
+    #     echo "WARN: Gocrypfs ciper dir already mounted at ${GOCRYPTFS_CIPER_DIR_PATH}"
+    # else
+    #     echo "INFO: Gocrypfs plain dir ${GOCRYPTFS_PLAIN_DIR_PATH} mounted as ciper dir at ${GOCRYPTFS_CIPER_DIR_PATH}"
+    #     echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${GOCRYPTFS_PLAIN_DIR_PATH}" "${GOCRYPTFS_CIPER_DIR_PATH}"
+    # fi
 }
 
 function umount_gocryptfs_volume() {
-    umount "${GOCRYPTFS_CIPER_DIR_PATH}"
+    local mount_path="$1"
+
+    if is_dir_mounted "${mount_path}"; then
+        if umount "${mount_path}"; then
+            echo "INFO: Gocrypfs dir unmounted at ${mount_path}"
+            return 0
+        else
+            echo "ERROR: Failed to unmount gocryptfs dir at ${mount_path}"
+            return 1
+        fi
+    else
+        echo "WARN: Gocrypfs dir already unmounted at ${mount_path}"
+        return 0
+    fi
+}
+
+function umount_gocryptfs_backup_volume() {
+    umount_gocryptfs_volume "${GOCRYPTFS_CIPER_DIR_PATH}"
+}
+
+function umount_gocryptfs_restore_volume() {
+    umount_gocryptfs_volume "${GOCRYPTFS_RESTORE_DIR_PATH}"
+}
+
+function mount_gocryptfs_backup_volume() {
+    mount_gocryptfs_volume "reverse" "${GOCRYPTFS_PLAIN_DIR_PATH}" "${GOCRYPTFS_CIPER_DIR_PATH}"
+}
+
+function mount_gocryptfs_restore_volume() {
+    mount_gocryptfs_volume "normal" "${GOCRYPTFS_RESTORE_DIR_PATH}" "${GOCRYPTFS_BACKUP_DIR_PATH}"
+}
+
+function backup_plain_directory() {
+    if mount_gocryptfs_backup_volume; then
+        if rsync -av --delete "${GOCRYPTFS_CIPER_DIR_PATH}/" "${GOCRYPTFS_BACKUP_DIR_PATH}/" >/dev/null 2>&1; then
+            echo "INFO: Backup was successful!"
+        fi
+        umount_gocryptfs_backup_volume
+    fi
+}
+
+function resore_plain_directory() {
+    if mount_gocryptfs_restore_volume; then
+        mv "${GOCRYPTFS_PLAIN_DIR_PATH}/.gocryptfs.reverse.conf" "/root/.gocryptfs.reverse.conf"
+        rsync -av --delete "${GOCRYPTFS_RESTORE_DIR_PATH}/" "${GOCRYPTFS_PLAIN_DIR_PATH}/"
+        mv "/root/.gocryptfs.reverse.conf" "${GOCRYPTFS_PLAIN_DIR_PATH}/.gocryptfs.reverse.conf"
+        umount_gocryptfs_restore_volume
+    fi
+    return 0
 }
 
 function init() {
     init_config_dir
-    init_gocryptfs_dirs
-    install_gocryptfs
-    download_gotify_secret
     download_discord_secret
+    download_gotify_secret
+    install_gocryptfs
     generate_gocryptfs_password
+    init_gocryptfs_dirs
+    init_gocryptfs
 }
 
 function main() {
+    backup_plain_directory
+    resore_plain_directory
     return 0
 }
 
