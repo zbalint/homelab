@@ -3,6 +3,7 @@
 readonly CONTAINER_NAME="$(hostname)"
 
 readonly CONFIG_DIR="/root"
+readonly FIRST_RUN_FLAG="${CONFIG_DIR}/.initialized"
 # readonly CONFIG_DIR="/home/zbalint/.hl-test-config"
 readonly GLOBAL_SECRET_DIR="/secrets"
 readonly CONTAINER_SECRET_DIR="${CONFIG_DIR}/secrets"
@@ -14,10 +15,6 @@ readonly DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discor
 
 readonly GOCRYPTFS_VERSION="2.6.1"
 readonly GOCRYPTFS_ARCHIVE_URL="https://github.com/rfjakob/gocryptfs/releases/download/v${GOCRYPTFS_VERSION}/gocryptfs_v${GOCRYPTFS_VERSION}_linux-static_amd64.tar.gz"
-# readonly GOCRYPTFS_PLAIN_DIR_PATH="/opt/docker"
-# readonly GOCRYPTFS_CIPHER_DIR_PATH="/opt/cipher"
-# readonly GOCRYPTFS_BACKUP_DIR_PATH="/backup/${CONTAINER_NAME}"
-# readonly GOCRYPTFS_RESTORE_DIR_PATH="/opt/restore"
 
 readonly GOCRYPTFS_PLAIN_DOCKER_DIR_PATH="/opt/docker"
 readonly GOCRYPTFS_PLAIN_TAILSCALE_DIR_PATH="/var/lib/tailscale"
@@ -161,6 +158,18 @@ function create_dir() {
     local dir="$1"
 
     mkdir -p "${dir}" >/dev/null 2>&1 && chown ${DOCKER_USER}:${DOCKER_USER} "${dir}" >/dev/null 2>&1
+}
+
+function is_first_run() {
+    if is_file_exists "${FIRST_RUN_FLAG}"; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+function clear_first_run_flag() {
+    touch "${FIRST_RUN_FLAG}"
 }
 
 function download_from_github() {
@@ -428,7 +437,7 @@ function generate_gocryptfs_password() {
         write_file "${GOCRYPTFS_SECRET_FILE_PATH}" "${encrypted_password}"
         GOCRYPTFS_SECRET="${password}"
 
-        send_discord_notification "secret" "Container: ${CONTAINER_NAME}\nSECRET: ${encrypted_password}"
+        send_discord_notification "secret" "Container:\n${CONTAINER_NAME}\nSECRET:\n${encrypted_password}"
     fi
 }
 
@@ -560,9 +569,13 @@ function restore_directory() {
     local source_dir="$1"
     local dest_dir="$2"
 
-    mv "${dest_dir}/.gocryptfs.reverse.conf" "/root/.gocryptfs.reverse.conf"
+    if is_file_exists "${dest_dir}/.gocryptfs.reverse.conf"; then
+        mv "${dest_dir}/.gocryptfs.reverse.conf" "${CONFIG_DIR}/.gocryptfs.reverse.conf"
+    fi
     rsync -av --delete "${source_dir}/" "${dest_dir}/"
-    mv "/root/.gocryptfs.reverse.conf" "${dest_dir}/.gocryptfs.reverse.conf"
+    if is_file_exists "/root/.gocryptfs.reverse.conf"; then
+        mv "${CONFIG_DIR}/.gocryptfs.reverse.conf" "${dest_dir}/.gocryptfs.reverse.conf"
+    fi
 }
 
 function restore_docker_directory() {
@@ -585,16 +598,59 @@ function restore_tailscale_directory() {
     return 0
 }
 
+function check_for_docker_backup() {
+    if is_file_exists "${GOCRYPTFS_BACKUP_DOCKER_DIR_PATH}/gocryptfs.conf"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function check_for_tailscale_backup() {
+    if is_file_exists "${GOCRYPTFS_BACKUP_TAILSCALE_DIR_PATH}/gocryptfs.conf"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+
+function check_for_backups() {
+    if is_first_run; then
+        init_gocryptfs_dirs
+        echo "INFO: Running first run checks..."
+        if is_file_exists "${GOCRYPTFS_SECRET_FILE_PATH}"; then
+            generate_gocryptfs_password
+            if check_for_docker_backup; then
+                echo "INFO: Docker backup found! Restoring on first run."
+                restore_docker_directory
+            elif check_for_tailscale_backup; then
+                echo "INFO: Tailscale backup found! Restoring on first run."
+                restore_tailscale_directory
+            else
+                echo "INFO: No backups found!"
+            fi
+            clear_first_run_flag
+        else
+            if check_for_docker_backup || check_for_tailscale_backup; then
+                echo "WARN: Backups found! Missing encryption key."
+                send_discord_notification "notif" "Please provide encryption key for container ${CONTAINER_NAME} or delete existing backups!"
+            else
+                generate_gocryptfs_password
+                init_gocryptfs_docker
+                init_gocryptfs_tailscale
+                clear_first_run_flag
+            fi
+        fi
+    fi
+}
 
 function init() {
     init_config_dir
     download_discord_secret
     download_gotify_secret
     install_gocryptfs
-    generate_gocryptfs_password
-    init_gocryptfs_dirs
-    init_gocryptfs_docker
-    init_gocryptfs_tailscale
+    check_for_backups
 }
 
 function main() {
