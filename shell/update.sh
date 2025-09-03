@@ -346,6 +346,22 @@ function get_project_name() {
     echo "${container_name}"
 }
 
+function stop_docker_daemon() {
+    systemctl stop docker.socket && systemctl stop docker.service && systemctl stop containerd.service
+}
+
+function start_docker_daemon() {
+    systemctl start containerd.service && systemctl start docker.service && systemctl start docker.socket
+}
+
+function stop_tailscale_daemon() {
+    tailscale down; systemctl stop tailscaled
+}
+
+function start_tailscale_daemon() {
+    systemctl start tailscaled && tailscale up
+}
+
 function install_gocryptfs() {
     if ! gocryptfs -version >/dev/null 2>&1; then
         local archive_path="/tmp/gocryptfs.tar.gz"
@@ -491,32 +507,84 @@ function umount_gocryptfs_restore_volume() {
     umount_gocryptfs_volume "${GOCRYPTFS_RESTORE_DIR_PATH}"
 }
 
-function mount_gocryptfs_backup_volume() {
-    mount_gocryptfs_volume "reverse" "${GOCRYPTFS_PLAIN_DIR_PATH}" "${GOCRYPTFS_CIPHER_DIR_PATH}"
+function mount_gocryptfs_docker_volume() {
+    mount_gocryptfs_volume "reverse" "${GOCRYPTFS_PLAIN_DOCKER_DIR_PATH}" "${GOCRYPTFS_CIPHER_DIR_PATH}"
+}
+
+function mount_gocryptfs_tailscale_volume() {
+    mount_gocryptfs_volume "reverse" "${GOCRYPTFS_PLAIN_TAILSCALE_DIR_PATH}" "${GOCRYPTFS_CIPHER_DIR_PATH}"
 }
 
 function mount_gocryptfs_restore_volume() {
     mount_gocryptfs_volume "normal" "${GOCRYPTFS_RESTORE_DIR_PATH}" "${GOCRYPTFS_BACKUP_DIR_PATH}"
 }
 
-function backup_plain_directory() {
-    if mount_gocryptfs_backup_volume; then
-        if rsync -av --delete "${GOCRYPTFS_CIPHER_DIR_PATH}/" "${GOCRYPTFS_BACKUP_DIR_PATH}/" >/dev/null 2>&1; then
+function mount_gocryptfs_docker_restore_volume() {
+    mount_gocryptfs_volume "normal" "${GOCRYPTFS_RESTORE_DIR_PATH}" "${GOCRYPTFS_BACKUP_DOCKER_DIR_PATH}"
+}
+
+function mount_gocryptfs_tailscale_restore_volume() {
+    mount_gocryptfs_volume "normal" "${GOCRYPTFS_RESTORE_DIR_PATH}" "${GOCRYPTFS_BACKUP_TAILSCALE_DIR_PATH}"
+}
+
+function backup_directory() {
+    local source_dir="$1"
+    local dest_dir="$2"
+
+    rsync -av --delete "${source_dir}/" "${dest_dir}/" >/dev/null 2>&1
+}
+
+function backup_docker_directory() {
+    if mount_gocryptfs_docker_volume; then
+        stop_docker_daemon
+        if backup_directory "${GOCRYPTFS_CIPHER_DIR_PATH}/" "${GOCRYPTFS_BACKUP_DOCKER_DIR_PATH}/"; then
             echo "INFO: Backup was successful!"
         fi
         umount_gocryptfs_backup_volume
+        start_docker_daemon
     fi
 }
 
-function resore_plain_directory() {
-    if mount_gocryptfs_restore_volume; then
-        mv "${GOCRYPTFS_PLAIN_DIR_PATH}/.gocryptfs.reverse.conf" "/root/.gocryptfs.reverse.conf"
-        rsync -av --delete "${GOCRYPTFS_RESTORE_DIR_PATH}/" "${GOCRYPTFS_PLAIN_DIR_PATH}/"
-        mv "/root/.gocryptfs.reverse.conf" "${GOCRYPTFS_PLAIN_DIR_PATH}/.gocryptfs.reverse.conf"
+function backup_tailscale_directory() {
+    if mount_gocryptfs_tailscale_volume; then
+        stop_tailscale_daemon
+        if backup_directory "${GOCRYPTFS_CIPHER_DIR_PATH}/" "${GOCRYPTFS_BACKUP_TAILSCALE_DIR_PATH}/"; then
+            echo "INFO: Backup was successful!"
+        fi
+        umount_gocryptfs_backup_volume
+        start_tailscale_daemon
+    fi
+}
+
+function restore_directory() {
+    local source_dir="$1"
+    local dest_dir="$2"
+
+    mv "${dest_dir}/.gocryptfs.reverse.conf" "/root/.gocryptfs.reverse.conf"
+    rsync -av --delete "${source_dir}/" "${dest_dir}/"
+    mv "/root/.gocryptfs.reverse.conf" "${dest_dir}/.gocryptfs.reverse.conf"
+}
+
+function restore_docker_directory() {
+    if mount_gocryptfs_docker_restore_volume; then
+        stop_docker_daemon
+        restore_directory "${GOCRYPTFS_RESTORE_DIR_PATH}" "${GOCRYPTFS_PLAIN_DOCKER_DIR_PATH}"
         umount_gocryptfs_restore_volume
+        start_docker_daemon
     fi
     return 0
 }
+
+function restore_tailscale_directory() {
+    if mount_gocryptfs_tailscale_restore_volume; then
+        stop_tailscale_daemon
+        restore_directory "${GOCRYPTFS_RESTORE_DIR_PATH}" "${GOCRYPTFS_PLAIN_TAILSCALE_DIR_PATH}"
+        umount_gocryptfs_restore_volume
+        start_tailscale_daemon
+    fi
+    return 0
+}
+
 
 function init() {
     init_config_dir
@@ -533,6 +601,9 @@ function main() {
     # backup_plain_directory
     # resore_plain_directory
     # send_discord_notification "notif" "hello"
+    # backup_docker_directory
+    # backup_tailscale_directory
+    # restore_tailscale_directory
     return 0
 }
 
