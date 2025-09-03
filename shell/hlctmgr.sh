@@ -44,6 +44,7 @@ readonly DOCKER_USER="tartarus"
 readonly DOCKER_PROJECT_BASE_DIR="/opt/docker/stacks"
 readonly DOCKER_PROJECT_FILE_NAME="docker-compose.yml"
 readonly DOCKER_PROJECT_ENV_FILE_NAME=".env"
+readonly DOCKER_PROJECT_ENV_ENC_FILE_NAME="env_enc"
 
 declare GOTIFY_SECRET
 declare DISCORD_SECRETS_CHANNEL_SECRET
@@ -689,20 +690,42 @@ function restore_docker_project() {
 }
 
 function download_docker_project() {
-    return 0
-}
-
-function update_docker_project() {
     local project="$(get_project_name)"
     local docker_project_dir="${DOCKER_PROJECT_BASE_DIR}/${project}"
     local docker_project_file_path="${docker_project_dir}/${DOCKER_PROJECT_FILE_NAME}"
     local docker_project_env_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_FILE_NAME}"
+    local docker_project_env_enc_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_ENC_FILE_NAME}"
+
+    if create_dir "${docker_project_dir}"; then
+        echo "INFO: Docker project dir successfully created at ${docker_project_dir}"
+    else
+        echo "ERROR: Failed to create docker project dir at ${docker_project_dir}"
+        return 1
+    fi
     
+    if download_from_github "${docker_project_file_path}" "${GITHUB_DOCKER_COMPOSE_FILE_URL}"; then
+        echo "INFO: Docker compose file successfully downloaded."
+    else
+        echo "WARN: Failed to download docker compose file from github!"
+    fi
+
+    if download_from_github "${docker_project_env_enc_file_path}" "${GITHUB_DOCKER_COMPOSE_ENV_FILE_URL}"; then
+        echo "INFO: Encrypted docker compose env file successfully downloaded."
+        if decrypt_file "${docker_project_env_enc_file_path}" "${docker_project_env_file_path}"; then
+            echo "INFO: Encrypted docker compose env file sucessfuly decrypted!"
+        else
+            echo "ERROR: Failed to decrypt docker compose env file!"
+        fi
+    else
+        echo "WARN: Failed to download encrypted docker compose env file from github!"
+    fi
     
-    echo $docker_project_dir
-    echo $docker_project_file_path
-    echo $docker_project_env_file_path
+
     return 0
+}
+
+function update_docker_project() {
+    download_docker_project
 }
 
 
