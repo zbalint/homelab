@@ -7,16 +7,23 @@ readonly CONFIG_DIR="/root"
 readonly GLOBAL_SECRET_DIR="/secrets"
 readonly CONTAINER_SECRET_DIR="${CONFIG_DIR}/secrets"
 readonly ENCRYPTION_KEY_FILE_PATH="${GLOBAL_SECRET_DIR}/.encryption_key"
-readonly GOCRYPTFS_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.gocryptfs_secret"
+readonly GOCRYPTFS_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.gocryptfs_secret.enc"
 readonly GOTIFY_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.gotify_secret.enc"
 readonly DISCORD_SECRETS_CHANNEL_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_secrets_secret.enc"
 readonly DISCORD_NOTIF_CHANNEL_SECRET_FILE_PATH="${CONTAINER_SECRET_DIR}/.discord_notif_secret.enc"
 
 readonly GOCRYPTFS_VERSION="2.6.1"
 readonly GOCRYPTFS_ARCHIVE_URL="https://github.com/rfjakob/gocryptfs/releases/download/v${GOCRYPTFS_VERSION}/gocryptfs_v${GOCRYPTFS_VERSION}_linux-static_amd64.tar.gz"
-readonly GOCRYPTFS_PLAIN_DIR_PATH="/opt/docker"
-readonly GOCRYPTFS_CIPER_DIR_PATH="/opt/cipher"
-readonly GOCRYPTFS_BACKUP_DIR_PATH="/backup/${CONTAINER_NAME}"
+# readonly GOCRYPTFS_PLAIN_DIR_PATH="/opt/docker"
+# readonly GOCRYPTFS_CIPHER_DIR_PATH="/opt/cipher"
+# readonly GOCRYPTFS_BACKUP_DIR_PATH="/backup/${CONTAINER_NAME}"
+# readonly GOCRYPTFS_RESTORE_DIR_PATH="/opt/restore"
+
+readonly GOCRYPTFS_PLAIN_DOCKER_DIR_PATH="/opt/docker"
+readonly GOCRYPTFS_PLAIN_TAILSCALE_DIR_PATH="/var/lib/tailscale"
+readonly GOCRYPTFS_BACKUP_DOCKER_DIR_PATH="/backup/${CONTAINER_NAME}/docker"
+readonly GOCRYPTFS_BACKUP_TAILSCALE_DIR_PATH="/backup/${CONTAINER_NAME}/tailscale"
+readonly GOCRYPTFS_CIPHER_DIR_PATH="/opt/cipher"
 readonly GOCRYPTFS_RESTORE_DIR_PATH="/opt/restore"
 
 readonly GITHUB_BASE_URL="https://raw.githubusercontent.com/zbalint/homelab/master"
@@ -367,23 +374,24 @@ function install_gocryptfs() {
     fi
 }
 
+function init_gocryptfs_dir() {
+    local type="$1"
+    local directory="$2"
+    local mode="$3"
+
+    if ! is_dir_exists "${directory}"; then
+        echo "INFO: Creating gocryptfs ${type} dir at ${directory}"
+        mkdir -p "${directory}" && chmod "${mode}" "${directory}"
+    fi
+}
+
 function init_gocryptfs_dirs() {
-    if ! is_dir_exists "${GOCRYPTFS_CIPER_DIR_PATH}"; then
-        echo "INFO: Createing gocryptfs ciper dir at ${GOCRYPTFS_CIPER_DIR_PATH}"
-        mkdir -p "${GOCRYPTFS_CIPER_DIR_PATH}" && chmod 700 "${GOCRYPTFS_CIPER_DIR_PATH}"
-    fi
-    if ! is_dir_exists "${GOCRYPTFS_PLAIN_DIR_PATH}"; then
-        echo "INFO: Createing gocryptfs plain dir at ${GOCRYPTFS_PLAIN_DIR_PATH}"
-        mkdir -p "${GOCRYPTFS_PLAIN_DIR_PATH}"
-    fi
-    if ! is_dir_exists "${GOCRYPTFS_BACKUP_DIR_PATH}"; then
-        echo "INFO: Createing gocryptfs backup dir at ${GOCRYPTFS_BACKUP_DIR_PATH}"
-        mkdir -p "${GOCRYPTFS_BACKUP_DIR_PATH}" && chmod 700 "${GOCRYPTFS_CIPER_DIR_PATH}"
-    fi
-    if ! is_dir_exists "${GOCRYPTFS_RESTORE_DIR_PATH}"; then
-        echo "INFO: Createing gocryptfs restore dir at ${GOCRYPTFS_RESTORE_DIR_PATH}"
-        mkdir -p "${GOCRYPTFS_RESTORE_DIR_PATH}" && chmod 700 "${GOCRYPTFS_CIPER_DIR_PATH}"
-    fi
+    init_gocryptfs_dir "plain" "${GOCRYPTFS_PLAIN_DOCKER_DIR_PATH}" "755"
+    init_gocryptfs_dir "plain" "${GOCRYPTFS_PLAIN_TAILSCALE_DIR_PATH}" "700"
+    init_gocryptfs_dir "backup" "${GOCRYPTFS_BACKUP_DOCKER_DIR_PATH}" "700"
+    init_gocryptfs_dir "backup" "${GOCRYPTFS_BACKUP_TAILSCALE_DIR_PATH}" "700"
+    init_gocryptfs_dir "cipher" "${GOCRYPTFS_CIPHER_DIR_PATH}" "700"
+    init_gocryptfs_dir "restore" "${GOCRYPTFS_RESTORE_DIR_PATH}" "700"
 }
 
 function generate_gocryptfs_password() {
@@ -409,50 +417,53 @@ function generate_gocryptfs_password() {
 }
 
 function init_gocryptfs() {
-    if is_file_exists "${GOCRYPTFS_PLAIN_DIR_PATH}/.gocryptfs.reverse.conf"; then
-        echo "INFO: Gocryptfs reverse volume found at ${GOCRYPTFS_PLAIN_DIR_PATH}"
+    local plain_dir="$1"
+
+    if is_file_exists "${plain_dir}/.gocryptfs.reverse.conf"; then
+        echo "INFO: Gocryptfs reverse volume found at ${plain_dir}"
         return 0
     fi
 
-    if echo "${GOCRYPTFS_SECRET}" | gocryptfs -init -reverse "${GOCRYPTFS_PLAIN_DIR_PATH}"; then
-        echo "INFO: Gocryptfs reverse volume initialized at ${GOCRYPTFS_PLAIN_DIR_PATH}"
+    if echo "${GOCRYPTFS_SECRET}" | gocryptfs -init -reverse "${plain_dir}"; then
+        echo "INFO: Gocryptfs reverse volume initialized at ${plain_dir}"
         return 0
     else
-        echo "ERROR: Could not initialize gocryptfs  at ${GOCRYPTFS_PLAIN_DIR_PATH}!"
+        echo "ERROR: Could not initialize gocryptfs at ${plain_dir}!"
         return 1
     fi
+}
+
+function init_gocryptfs_docker() {
+    init_gocryptfs "${GOCRYPTFS_PLAIN_DOCKER_DIR_PATH}"
+}
+
+function init_gocryptfs_tailscale() {
+    init_gocryptfs "${GOCRYPTFS_PLAIN_TAILSCALE_DIR_PATH}"
 }
 
 function mount_gocryptfs_volume() {
     local mode="$1"
     local plain_dir="$2"
-    local ciper_dir="$3"
+    local cipher_dir="$3"
 
     if is_var_equals "${mode}" "normal"; then
         if is_dir_mounted "${plain_dir}"; then
             echo "WARN: Gocrypfs plain dir already mounted at ${plain_dir}"
         else
-            echo "INFO: Gocrypfs ciper dir ${ciper_dir} mounted as plain dir at ${plain_dir}"
-            echo "${GOCRYPTFS_SECRET}" | gocryptfs "${ciper_dir}" "${plain_dir}"
+            echo "INFO: Gocrypfs cipher dir ${cipher_dir} mounted as plain dir at ${plain_dir}"
+            echo "${GOCRYPTFS_SECRET}" | gocryptfs "${cipher_dir}" "${plain_dir}"
         fi
     elif is_var_equals "${mode}" "reverse"; then
-        if is_dir_mounted "${ciper_dir}"; then
-            echo "WARN: Gocrypfs ciper dir already mounted at ${ciper_dir}"
+        if is_dir_mounted "${cipher_dir}"; then
+            echo "WARN: Gocrypfs cipher dir already mounted at ${cipher_dir}"
         else
-            echo "INFO: Gocrypfs plain dir ${plain_dir} mounted as ciper dir at ${ciper_dir}"
-            echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${plain_dir}" "${ciper_dir}"
+            echo "INFO: Gocrypfs plain dir ${plain_dir} mounted as cipher dir at ${cipher_dir}"
+            echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${plain_dir}" "${cipher_dir}"
         fi
     else
         echo "ERROR: Invalid gocryptfs mount mode!"
         return 1
     fi
-
-    # if is_dir_mounted "${GOCRYPTFS_CIPER_DIR_PATH}"; then
-    #     echo "WARN: Gocrypfs ciper dir already mounted at ${GOCRYPTFS_CIPER_DIR_PATH}"
-    # else
-    #     echo "INFO: Gocrypfs plain dir ${GOCRYPTFS_PLAIN_DIR_PATH} mounted as ciper dir at ${GOCRYPTFS_CIPER_DIR_PATH}"
-    #     echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${GOCRYPTFS_PLAIN_DIR_PATH}" "${GOCRYPTFS_CIPER_DIR_PATH}"
-    # fi
 }
 
 function umount_gocryptfs_volume() {
@@ -473,7 +484,7 @@ function umount_gocryptfs_volume() {
 }
 
 function umount_gocryptfs_backup_volume() {
-    umount_gocryptfs_volume "${GOCRYPTFS_CIPER_DIR_PATH}"
+    umount_gocryptfs_volume "${GOCRYPTFS_CIPHER_DIR_PATH}"
 }
 
 function umount_gocryptfs_restore_volume() {
@@ -481,7 +492,7 @@ function umount_gocryptfs_restore_volume() {
 }
 
 function mount_gocryptfs_backup_volume() {
-    mount_gocryptfs_volume "reverse" "${GOCRYPTFS_PLAIN_DIR_PATH}" "${GOCRYPTFS_CIPER_DIR_PATH}"
+    mount_gocryptfs_volume "reverse" "${GOCRYPTFS_PLAIN_DIR_PATH}" "${GOCRYPTFS_CIPHER_DIR_PATH}"
 }
 
 function mount_gocryptfs_restore_volume() {
@@ -490,7 +501,7 @@ function mount_gocryptfs_restore_volume() {
 
 function backup_plain_directory() {
     if mount_gocryptfs_backup_volume; then
-        if rsync -av --delete "${GOCRYPTFS_CIPER_DIR_PATH}/" "${GOCRYPTFS_BACKUP_DIR_PATH}/" >/dev/null 2>&1; then
+        if rsync -av --delete "${GOCRYPTFS_CIPHER_DIR_PATH}/" "${GOCRYPTFS_BACKUP_DIR_PATH}/" >/dev/null 2>&1; then
             echo "INFO: Backup was successful!"
         fi
         umount_gocryptfs_backup_volume
@@ -514,12 +525,14 @@ function init() {
     install_gocryptfs
     generate_gocryptfs_password
     init_gocryptfs_dirs
-    init_gocryptfs
+    init_gocryptfs_docker
+    init_gocryptfs_tailscale
 }
 
 function main() {
-    backup_plain_directory
-    resore_plain_directory
+    # backup_plain_directory
+    # resore_plain_directory
+    # send_discord_notification "notif" "hello"
     return 0
 }
 
