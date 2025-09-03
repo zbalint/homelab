@@ -302,14 +302,14 @@ function reload_firewall_config() {
 function update_firewall_config() {
     if backup_firewall_config; then
         if download_firewall_config && reload_firewall_config; then
-            echo firewall config succesfully updated and loaded
+            echo "INFO: Firewall config succesfully updated and loaded"
         elif restore_firewall_config && reload_firewall_config; then
-            echo firewall config update/load failed, but sucessfully restored and loaded
+            echo "WARN: Firewall config update/load failed, but sucessfully restored and loaded"
         else
-            echo firewall config failed to update/load and failed to restore/load
+            echo "ERROR: Firewall config failed to update/load and failed to restore/load"
         fi
     else
-        echo failed to backup firewall config
+        echo "ERROR: Failed to backup firewall config"
     fi
 }
 
@@ -334,19 +334,18 @@ function reload_docker_config() {
 function update_docker_config() {
     if backup_docker_config; then
         if download_docker_config && reload_docker_config; then
-            echo docker daemon config succesfully updated and loaded
+            echo "INFO: Docker daemon config succesfully updated and loaded"
         elif restore_docker_config && reload_docker_config; then
-            echo docker daemon config update/load failed, but sucessfully restored and loaded
+            echo "WARN: Docker daemon config update/load failed, but sucessfully restored and loaded"
         else
-            echo docker daemon config failed to update/load and failed to restore/load
+            echo "ERROR: Docker daemon config failed to update/load and failed to restore/load"
         fi
     else
-        echo failed to backup docker daemon config
+        echo "ERROR: Failed to backup docker daemon config"
     fi
 }
 
 function get_project_name() {
-    # local hostname="${CONTAINER_NAME}"
     local hostname="lxc-traefik-01"
     local temp_rm_prefix=${hostname#lxc-}
     local temp_rm_postfix=${temp_rm_prefix%-0*}
