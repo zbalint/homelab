@@ -172,6 +172,22 @@ function clear_first_run_flag() {
     touch "${FIRST_RUN_FLAG}"
 }
 
+function stop_docker_daemon() {
+    systemctl stop docker.socket && systemctl stop docker.service && systemctl stop containerd.service
+}
+
+function start_docker_daemon() {
+    systemctl start containerd.service && systemctl start docker.service && systemctl start docker.socket
+}
+
+function stop_tailscale_daemon() {
+    tailscale down; systemctl stop tailscaled
+}
+
+function start_tailscale_daemon() {
+    systemctl start tailscaled && tailscale up
+}
+
 function download_from_github() {
     local original_file_path="$1"
     local backup_file_path="${original_file_path}.bak"
@@ -302,46 +318,47 @@ function reload_firewall_config() {
 function update_firewall_config() {
     if backup_firewall_config; then
         if download_firewall_config && reload_firewall_config; then
-            echo "INFO: Firewall config succesfully updated and loaded"
+            echo "INFO: Firewall config succesfully updated and loaded."
         elif restore_firewall_config && reload_firewall_config; then
-            echo "WARN: Firewall config update/load failed, but sucessfully restored and loaded"
+            echo "WARN: Firewall config update/load failed, but sucessfully restored and loaded."
         else
-            echo "ERROR: Firewall config failed to update/load and failed to restore/load"
+            echo "ERROR: Firewall config failed to update/load and failed to restore/load."
         fi
     else
-        echo "ERROR: Failed to backup firewall config"
+        echo "ERROR: Failed to backup firewall config!"
     fi
 }
 
-function backup_docker_config() {
+function backup_docker_daemon_config() {
     copy_file ${DOCKER_CONFIG_FILE_PATH} ${DOCKER_BACKUP_FILE_PATH}
 }
 
-function restore_docker_config() {
+function restore_docker_daemon_config() {
     copy_file ${DOCKER_BACKUP_FILE_PATH} ${DOCKER_CONFIG_FILE_PATH}
 }
 
-function download_docker_config() {
+function download_docker_daemon_config() {
     if ! download_file "${GITHUB_DOCKER_CONFIG_URL}" "${DOCKER_CONFIG_FILE_PATH}"; then
         download_file "${GITHUB_DOCKER_DEFAULT_CONFIG_URL}" "${DOCKER_CONFIG_FILE_PATH}"
     fi
 }
 
-function reload_docker_config() {
-    systemctl restart docker >/dev/null 2>&1
+function reload_docker_daemon_config() {
+    stop_docker_daemon
+    start_docker_daemon
 }
 
 function update_docker_config() {
-    if backup_docker_config; then
-        if download_docker_config && reload_docker_config; then
-            echo "INFO: Docker daemon config succesfully updated and loaded"
-        elif restore_docker_config && reload_docker_config; then
-            echo "WARN: Docker daemon config update/load failed, but sucessfully restored and loaded"
+    if backup_docker_daemon_config; then
+        if download_docker_daemon_config && reload_docker_daemon_config; then
+            echo "INFO: Docker daemon config succesfully updated and loaded."
+        elif restore_docker_daemon_config && reload_docker_daemon_config; then
+            echo "WARN: Docker daemon config update/load failed, but sucessfully restored and loaded."
         else
-            echo "ERROR: Docker daemon config failed to update/load and failed to restore/load"
+            echo "ERROR: Docker daemon config failed to update/load and failed to restore/load."
         fi
     else
-        echo "ERROR: Failed to backup docker daemon config"
+        echo "ERROR: Failed to backup docker daemon config."
     fi
 }
 
@@ -352,22 +369,6 @@ function get_project_name() {
     local container_name=${temp_rm_postfix}
 
     echo "${container_name}"
-}
-
-function stop_docker_daemon() {
-    systemctl stop docker.socket && systemctl stop docker.service && systemctl stop containerd.service
-}
-
-function start_docker_daemon() {
-    systemctl start containerd.service && systemctl start docker.service && systemctl start docker.socket
-}
-
-function stop_tailscale_daemon() {
-    tailscale down; systemctl stop tailscaled
-}
-
-function start_tailscale_daemon() {
-    systemctl start tailscaled && tailscale up
 }
 
 function install_gocryptfs() {
@@ -613,7 +614,6 @@ function check_for_tailscale_backup() {
     fi
 }
 
-
 function check_for_backups() {
     if is_first_run; then
         init_gocryptfs_dirs
@@ -644,11 +644,15 @@ function check_for_backups() {
     fi
 }
 
+
+
 function init() {
     init_config_dir
+    install_gocryptfs
     download_discord_secret
     download_gotify_secret
-    install_gocryptfs
+    update_firewall_config
+    update_docker_config
     check_for_backups
 }
 
