@@ -29,6 +29,7 @@ readonly GITHUB_FIREWALL_CONFIG_URL="${GITHUB_BASE_URL}/firewall/${CONTAINER_NAM
 readonly GITHUB_DOCKER_DEFAULT_CONFIG_URL="${GITHUB_BASE_URL}/docker/daemon.json"
 readonly GITHUB_DOCKER_CONFIG_URL="${GITHUB_BASE_URL}/docker/${CONTAINER_NAME}/daemon.json"
 readonly GITHUB_DOCKER_COMPOSE_FILE_URL="${GITHUB_BASE_URL}/docker/${CONTAINER_NAME}/docker-compose.yaml"
+readonly GITHUB_DOCKER_COMPOSE_ENV_FILE_URL="${GITHUB_BASE_URL}/docker/${CONTAINER_NAME}/env.enc"
 readonly GITHUB_GOTIFY_SECRET_URL="${GITHUB_BASE_URL}/secret/.gotify_secret.enc"
 readonly GITHUB_DISCORD_NOTIF_CHANNEL_SECRET_URL="${GITHUB_BASE_URL}/secret/.discord_notif_secret.enc"
 readonly GITHUB_DISCORD_SECRETS_CHANNEL_SECRET_URL="${GITHUB_BASE_URL}/secret/.discord_secrets_secret.enc"
@@ -40,9 +41,9 @@ readonly DOCKER_CONFIG_FILE_PATH="/etc/docker/daemon.json"
 readonly DOCKER_BACKUP_FILE_PATH="/etc/docker/daemon.json.bak"
 
 readonly DOCKER_USER="tartarus"
-# readonly DOCKER_PROJECT_DIR="/opt/docker/stacks/{project}"
-readonly DOCKER_PROJECT_DIR="/tmp/docker/stacks/{project}"
-readonly DOCKER_PROJECT_FILE_PATH="${DOCKER_PROJECT_DIR}/docker-compose.yml"
+readonly DOCKER_PROJECT_BASE_DIR="/opt/docker/stacks"
+readonly DOCKER_PROJECT_FILE_NAME="docker-compose.yml"
+readonly DOCKER_PROJECT_ENV_FILE_NAME=".env"
 
 declare GOTIFY_SECRET
 declare DISCORD_SECRETS_CHANNEL_SECRET
@@ -363,12 +364,12 @@ function update_docker_config() {
 }
 
 function get_project_name() {
-    local hostname="lxc-traefik-01"
-    local temp_rm_prefix=${hostname#lxc-}
+    local container_name="${CONTAINER_NAME}"
+    local temp_rm_prefix=${container_name#lxc-}
     local temp_rm_postfix=${temp_rm_prefix%-0*}
-    local container_name=${temp_rm_postfix}
+    local project_name=${temp_rm_postfix}
 
-    echo "${container_name}"
+    echo "${project_name}"
 }
 
 function install_gocryptfs() {
@@ -544,25 +545,39 @@ function backup_directory() {
 }
 
 function backup_docker_directory() {
+    local result=1
+
     if mount_gocryptfs_docker_volume; then
         stop_docker_daemon
         if backup_directory "${GOCRYPTFS_CIPHER_DIR_PATH}/" "${GOCRYPTFS_BACKUP_DOCKER_DIR_PATH}/"; then
-            echo "INFO: Backup was successful!"
+            echo "INFO: Docker directory backup was successful!"
+            result=0
+        else
+            echo "ERROR: Docker directory backup failed!"
         fi
         umount_gocryptfs_backup_volume
         start_docker_daemon
     fi
+
+    return ${result}
 }
 
 function backup_tailscale_directory() {
+    local result=1
+
     if mount_gocryptfs_tailscale_volume; then
         stop_tailscale_daemon
         if backup_directory "${GOCRYPTFS_CIPHER_DIR_PATH}/" "${GOCRYPTFS_BACKUP_TAILSCALE_DIR_PATH}/"; then
-            echo "INFO: Backup was successful!"
+            echo "INFO: Tailsacle directory backup was successful!"
+            result=0
+        else
+            echo "ERROR: Tailscale directory backup failed!"
         fi
         umount_gocryptfs_backup_volume
         start_tailscale_daemon
     fi
+
+    return ${result}
 }
 
 function restore_directory() {
@@ -573,29 +588,48 @@ function restore_directory() {
         mv "${dest_dir}/.gocryptfs.reverse.conf" "${CONFIG_DIR}/.gocryptfs.reverse.conf"
     fi
     rsync -av --delete "${source_dir}/" "${dest_dir}/"
+    local result=$?
     if is_file_exists "/root/.gocryptfs.reverse.conf"; then
         mv "${CONFIG_DIR}/.gocryptfs.reverse.conf" "${dest_dir}/.gocryptfs.reverse.conf"
     fi
+
+    return ${result}
 }
 
 function restore_docker_directory() {
+    local result=1
+
     if mount_gocryptfs_docker_restore_volume; then
         stop_docker_daemon
-        restore_directory "${GOCRYPTFS_RESTORE_DIR_PATH}" "${GOCRYPTFS_PLAIN_DOCKER_DIR_PATH}"
+        if restore_directory "${GOCRYPTFS_RESTORE_DIR_PATH}" "${GOCRYPTFS_PLAIN_DOCKER_DIR_PATH}"; then
+            echo "INFO: Docker directory restore was successful!"
+            result=0
+        else
+            echo "ERROR: Docker directory restore failed!"
+        fi
         umount_gocryptfs_restore_volume
         start_docker_daemon
     fi
-    return 0
+    
+    return ${result}
 }
 
 function restore_tailscale_directory() {
+    local result=1
+
     if mount_gocryptfs_tailscale_restore_volume; then
         stop_tailscale_daemon
-        restore_directory "${GOCRYPTFS_RESTORE_DIR_PATH}" "${GOCRYPTFS_PLAIN_TAILSCALE_DIR_PATH}"
+        if restore_directory "${GOCRYPTFS_RESTORE_DIR_PATH}" "${GOCRYPTFS_PLAIN_TAILSCALE_DIR_PATH}"; then
+            echo "INFO: Tailsacle directory restore was successful!"
+            result=0
+        else
+            echo "ERROR: Tailscale directory restore failed!"
+        fi
         umount_gocryptfs_restore_volume
         start_tailscale_daemon
     fi
-    return 0
+    
+    return ${result}
 }
 
 function check_for_docker_backup() {
@@ -644,6 +678,32 @@ function check_for_backups() {
     fi
 }
 
+function backup_docker_project() {
+    echo "INFO: Starting docker project backup..."
+    backup_docker_directory
+}
+
+function restore_docker_project() {
+    echo "INFO: Starting docker project restore..."
+    restore_docker_directory
+}
+
+function download_docker_project() {
+    return 0
+}
+
+function update_docker_project() {
+    local project="$(get_project_name)"
+    local docker_project_dir="${DOCKER_PROJECT_BASE_DIR}/${project}"
+    local docker_project_file_path="${docker_project_dir}/${DOCKER_PROJECT_FILE_NAME}"
+    local docker_project_env_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_FILE_NAME}"
+    
+    
+    echo $docker_project_dir
+    echo $docker_project_file_path
+    echo $docker_project_env_file_path
+    return 0
+}
 
 
 function init() {
@@ -657,12 +717,7 @@ function init() {
 }
 
 function main() {
-    # backup_plain_directory
-    # resore_plain_directory
-    # send_discord_notification "notif" "hello"
-    # backup_docker_directory
-    # backup_tailscale_directory
-    # restore_tailscale_directory
+    update_docker_project
     return 0
 }
 
