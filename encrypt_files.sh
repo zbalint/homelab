@@ -39,7 +39,7 @@ function encrypt_files() {
     do
         local encrypted_file="${decrypted_file%${decrypted_file_postfix}}${encrypted_file_postfix}"  
         echo "Encrypting ${decrypted_file} file to ${encrypted_file}"
-        # encrypt_file "${decrypted_file}" "${encrypted_file}" 
+        encrypt_file "${decrypted_file}" "${encrypted_file}" 
     done
 }
 
