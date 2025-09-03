@@ -443,7 +443,7 @@ function generate_gocryptfs_password() {
     fi
 }
 
-function init_gocryptfs() {
+function init_gocryptfs_volume() {
     local plain_dir="$1"
 
     if is_file_exists "${plain_dir}/.gocryptfs.reverse.conf"; then
@@ -461,11 +461,11 @@ function init_gocryptfs() {
 }
 
 function init_gocryptfs_docker() {
-    init_gocryptfs "${GOCRYPTFS_PLAIN_DOCKER_DIR_PATH}"
+    init_gocryptfs_volume "${GOCRYPTFS_PLAIN_DOCKER_DIR_PATH}"
 }
 
 function init_gocryptfs_tailscale() {
-    init_gocryptfs "${GOCRYPTFS_PLAIN_TAILSCALE_DIR_PATH}"
+    init_gocryptfs_volume "${GOCRYPTFS_PLAIN_TAILSCALE_DIR_PATH}"
 }
 
 function mount_gocryptfs_volume() {
@@ -477,15 +477,15 @@ function mount_gocryptfs_volume() {
         if is_dir_mounted "${plain_dir}"; then
             echo "WARN: Gocrypfs plain dir already mounted at ${plain_dir}"
         else
-            echo "INFO: Gocrypfs cipher dir ${cipher_dir} mounted as plain dir at ${plain_dir}"
             echo "${GOCRYPTFS_SECRET}" | gocryptfs "${cipher_dir}" "${plain_dir}"
+            echo "INFO: Gocrypfs cipher dir ${cipher_dir} mounted as plain dir at ${plain_dir}"
         fi
     elif is_var_equals "${mode}" "reverse"; then
         if is_dir_mounted "${cipher_dir}"; then
             echo "WARN: Gocrypfs cipher dir already mounted at ${cipher_dir}"
         else
-            echo "INFO: Gocrypfs plain dir ${plain_dir} mounted as cipher dir at ${cipher_dir}"
             echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${plain_dir}" "${cipher_dir}"
+            echo "INFO: Gocrypfs plain dir ${plain_dir} mounted as cipher dir at ${cipher_dir}"
         fi
     else
         echo "ERROR: Invalid gocryptfs mount mode!"
@@ -558,6 +558,9 @@ function backup_docker_directory() {
         fi
         umount_gocryptfs_backup_volume
         start_docker_daemon
+    else
+        echo "ERROR: Failed to mount docker backup directory!"
+        result=1
     fi
 
     return ${result}
@@ -590,7 +593,7 @@ function restore_directory() {
     fi
     rsync -av --delete "${source_dir}/" "${dest_dir}/"
     local result=$?
-    if is_file_exists "/root/.gocryptfs.reverse.conf"; then
+    if is_file_exists "${CONFIG_DIR}/.gocryptfs.reverse.conf"; then
         mv "${CONFIG_DIR}/.gocryptfs.reverse.conf" "${dest_dir}/.gocryptfs.reverse.conf"
     fi
 
@@ -655,6 +658,9 @@ function check_for_backups() {
         echo "INFO: Running first run checks..."
         if is_file_exists "${GOCRYPTFS_SECRET_FILE_PATH}"; then
             generate_gocryptfs_password
+            init_gocryptfs_docker
+            init_gocryptfs_tailscale
+
             if check_for_docker_backup; then
                 echo "INFO: Docker backup found! Restoring on first run."
                 restore_docker_directory
@@ -676,6 +682,10 @@ function check_for_backups() {
                 clear_first_run_flag
             fi
         fi
+    else
+        generate_gocryptfs_password
+        init_gocryptfs_docker
+        init_gocryptfs_tailscale
     fi
 }
 
@@ -689,29 +699,43 @@ function restore_docker_project() {
     restore_docker_directory
 }
 
+function stop_docker_project() {
+    local docker_project_dir="$1"
+    
+    cd "${docker_project_dir}" || return 1
+    docker compose down >/dev/null 2>&1
+    cd || return 1
+}
+
+function start_docker_project() {
+    local docker_project_dir="$1"
+
+    cd "${docker_project_dir}" || return 1
+    docker compose pull >/dev/null 2>&1 && docker compose up -d >/dev/null 2>&1
+    yes | docker system prune --all >/dev/null 2>&1
+    cd || return 1
+}
+
 function download_docker_project() {
-    local project="$(get_project_name)"
+    local project; project="$(get_project_name)"
     local docker_project_dir="${DOCKER_PROJECT_BASE_DIR}/${project}"
     local docker_project_file_path="${docker_project_dir}/${DOCKER_PROJECT_FILE_NAME}"
     local docker_project_env_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_FILE_NAME}"
     local docker_project_env_enc_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_ENC_FILE_NAME}"
-
-    if create_dir "${docker_project_dir}"; then
-        echo "INFO: Docker project dir successfully created at ${docker_project_dir}"
-    else
-        echo "ERROR: Failed to create docker project dir at ${docker_project_dir}"
-        return 1
-    fi
     
     if download_from_github "${docker_project_file_path}" "${GITHUB_DOCKER_COMPOSE_FILE_URL}"; then
+        chown ${DOCKER_USER}:${DOCKER_USER} "${docker_project_file_path}"
         echo "INFO: Docker compose file successfully downloaded."
     else
         echo "WARN: Failed to download docker compose file from github!"
     fi
 
     if download_from_github "${docker_project_env_enc_file_path}" "${GITHUB_DOCKER_COMPOSE_ENV_FILE_URL}"; then
+        chown ${DOCKER_USER}:${DOCKER_USER} "${docker_project_env_enc_file_path}"
         echo "INFO: Encrypted docker compose env file successfully downloaded."
+
         if decrypt_file "${docker_project_env_enc_file_path}" "${docker_project_env_file_path}"; then
+            chown ${DOCKER_USER}:${DOCKER_USER} "${docker_project_env_file_path}"
             echo "INFO: Encrypted docker compose env file sucessfuly decrypted!"
         else
             echo "ERROR: Failed to decrypt docker compose env file!"
@@ -724,8 +748,28 @@ function download_docker_project() {
     return 0
 }
 
+function check_docker_project() {
+    return 0
+}
+
 function update_docker_project() {
+    local project; project="$(get_project_name)"
+    local docker_project_dir="${DOCKER_PROJECT_BASE_DIR}/${project}"
+    local docker_project_file_path="${docker_project_dir}/${DOCKER_PROJECT_FILE_NAME}"
+    local docker_project_env_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_FILE_NAME}"
+    local docker_project_env_enc_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_ENC_FILE_NAME}"
+
+    if create_dir "${docker_project_dir}"; then
+        echo "INFO: Docker project dir successfully created at ${docker_project_dir}"
+    else
+        echo "ERROR: Failed to create docker project dir at ${docker_project_dir}"
+        return 1
+    fi
+
+    stop_docker_project "${docker_project_dir}"
+    backup_docker_directory
     download_docker_project
+    start_docker_project "${docker_project_dir}"
 }
 
 
