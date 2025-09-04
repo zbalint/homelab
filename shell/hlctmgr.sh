@@ -749,7 +749,22 @@ function download_docker_project() {
 }
 
 function check_docker_project() {
-    return 0
+    local docker_project_file_path="$1"
+    local status=0
+
+    echo "INFO: Checking docker project health..."
+    grep "container_name" "${docker_project_file_path}" | awk '{print $2}' > /tmp/container_list
+    
+    while IFS= read -r container; do
+        if docker ps | grep "${container}" >/dev/null 2>&1; then
+            echo "INFO: ${container} is running."
+        else
+            echo "ERROR: ${container} is not running!"
+            status=1
+        fi
+    done < "/tmp/container_list"
+
+    return ${status}
 }
 
 function update_docker_project() {
@@ -770,6 +785,20 @@ function update_docker_project() {
     backup_docker_directory
     download_docker_project
     start_docker_project "${docker_project_dir}"
+    if check_docker_project "${docker_project_file_path}"; then
+        echo "INFO: Docker project successfully updated!"
+    else
+        echo "WARN: Docker project healthcheck failed!"
+        echo "INFO: Restoring docker project..."
+        stop_docker_project "${docker_project_dir}"
+        restore_docker_directory
+        start_docker_project "${docker_project_dir}"
+        if check_docker_project "${docker_project_file_path}"; then
+            echo "INFO: Docker project healthcheck is successful after restore."
+        else
+            echo "ERROR: Docker project healthcheck still failing after restore!"
+        fi
+    fi
 }
 
 
