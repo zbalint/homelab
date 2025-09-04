@@ -750,10 +750,11 @@ function download_docker_project() {
 
 function check_docker_project() {
     local docker_project_file_path="$1"
+    local temp_file="/tmp/container_list"
     local status=0
 
     echo "INFO: Checking docker project health..."
-    grep "container_name" "${docker_project_file_path}" | awk '{print $2}' > /tmp/container_list
+    grep "container_name" "${docker_project_file_path}" | awk '{print $2}' > "${temp_file}"
     
     while IFS= read -r container; do
         if docker ps | grep "${container}" >/dev/null 2>&1; then
@@ -762,7 +763,9 @@ function check_docker_project() {
             echo "ERROR: ${container} is not running!"
             status=1
         fi
-    done < "/tmp/container_list"
+    done < "${temp_file}"
+
+    rm -f "${temp_file}"
 
     return ${status}
 }
@@ -785,6 +788,8 @@ function update_docker_project() {
     backup_docker_directory
     download_docker_project
     start_docker_project "${docker_project_dir}"
+    echo "INFO: Waiting 3s for project start up..."
+    sleep 3
     if check_docker_project "${docker_project_file_path}"; then
         echo "INFO: Docker project successfully updated!"
     else
