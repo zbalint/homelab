@@ -175,11 +175,13 @@ function clear_first_run_flag() {
 }
 
 function stop_docker_daemon() {
-    systemctl stop docker.socket && systemctl stop docker.service && systemctl stop containerd.service
+    echo "INFO: Stopping docker daemon... (5s wait time)"
+    systemctl stop docker.socket && systemctl stop docker.service && systemctl stop containerd.service && sleep 5
 }
 
 function start_docker_daemon() {
-    systemctl start containerd.service && systemctl start docker.service && systemctl start docker.socket
+    echo "INFO: Starting docker daemon... (5s wait time)"
+    systemctl start containerd.service && systemctl start docker.service && systemctl start docker.socket && sleep 5
 }
 
 function stop_tailscale_daemon() {
