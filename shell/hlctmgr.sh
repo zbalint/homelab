@@ -794,6 +794,8 @@ function update_docker_project() {
         echo "INFO: Docker project successfully updated!"
     else
         echo "WARN: Docker project healthcheck failed!"
+        echo "INFO: Waiting 10s before attempting to restore the docker project..."
+        sleep 10
         echo "INFO: Restoring docker project..."
         stop_docker_project "${docker_project_dir}"
         restore_docker_directory
