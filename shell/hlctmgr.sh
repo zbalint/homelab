@@ -703,6 +703,8 @@ function restore_docker_project() {
 
 function stop_docker_project() {
     local docker_project_dir="$1"
+
+    echo "INFO: Stopping the docker project..."
     
     cd "${docker_project_dir}" || return 1
     docker compose down >/dev/null 2>&1
@@ -711,6 +713,8 @@ function stop_docker_project() {
 
 function start_docker_project() {
     local docker_project_dir="$1"
+
+    echo "INFO: Starting the docker project..."
 
     cd "${docker_project_dir}" || return 1
     docker compose pull >/dev/null 2>&1 && docker compose up -d >/dev/null 2>&1
