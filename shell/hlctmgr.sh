@@ -810,14 +810,12 @@ function compare_docker_project() {
     local old_docker_project_hash;
     local new_docker_project_env_hash;
     local old_docker_project_env_hash;
-    
 
-    new_docker_project_hash="$(curl -fsSL "${GITHUB_DOCKER_COMPOSE_ENV_FILE_URL}" | sha1sum)"
+    new_docker_project_hash="$(curl -fsSL "${GITHUB_DOCKER_COMPOSE_FILE_URL}" | sha1sum)"
     old_docker_project_hash="$(cat ${docker_project_file_path} | sha1sum)"
     
     new_docker_project_env_hash="$(curl -fsSL "${GITHUB_DOCKER_COMPOSE_ENV_FILE_URL}" | sha1sum)"
     old_docker_project_env_hash="$(cat ${docker_project_env_enc_file_path} | sha1sum)"
-    
 
     if is_var_equals "${new_docker_project_hash}" "${old_docker_project_hash}" && is_var_equals "${new_docker_project_env_hash}" "${old_docker_project_env_hash}"; then
         return 0
@@ -855,11 +853,13 @@ function update_docker_project() {
     local docker_project_env_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_FILE_NAME}"
     local docker_project_env_enc_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_ENC_FILE_NAME}"
 
-    if create_dir "${docker_project_dir}"; then
-        echo "INFO: Docker project dir successfully created at ${docker_project_dir}"
-    else
-        echo "ERROR: Failed to create docker project dir at ${docker_project_dir}"
-        return 1
+    if ! is_dir_exists "${docker_project_dir}"; then
+        if create_dir "${docker_project_dir}"; then
+            echo "INFO: Docker project dir successfully created at ${docker_project_dir}"
+        else
+            echo "ERROR: Failed to create docker project dir at ${docker_project_dir}"
+            return 1
+        fi
     fi
 
     if compare_docker_project; then
@@ -871,8 +871,8 @@ function update_docker_project() {
     backup_docker_directory
     download_docker_project
     start_docker_project "${docker_project_dir}"
-    echo "INFO: Waiting 3s for project start up..."
-    sleep 3
+    echo "INFO: Waiting 10s for project start up..."
+    sleep 10
     if check_docker_project "${docker_project_file_path}"; then
         echo "INFO: Docker project successfully updated!"
     else
