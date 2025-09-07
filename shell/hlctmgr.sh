@@ -142,6 +142,13 @@ function decrypt_file_content() {
     decrypt_string "$(read_file "${file}")"
 }
 
+function compare_files() {
+    local file_1="$1"
+    local file_2="$2"
+
+    diff "${file_1}" "${file_2}" >/dev/null 2>&1
+}
+
 function download_file() {
     local url=$1
     local dest=$2
@@ -154,6 +161,13 @@ function copy_file() {
     local dst_file="$2"
 
     /bin/cp -rf "${src_file}" "${dst_file}" >/dev/null 2>&1
+}
+
+function move_file() {
+    local src_file="$1"
+    local dst_file="$2"
+
+    /bin/mv -f "${src_file}" "${dst_file}" >/dev/null 2>&1
 }
 
 function create_dir() {
@@ -319,17 +333,30 @@ function reload_firewall_config() {
     systemctl reload nftables >/dev/null 2>&1
 }
 
+function compate_firewall_config() {
+    compare_files "${FIREWALL_CONFIG_FILE_PATH}" "${FIREWALL_BACKUP_FILE_PATH}"
+}
+
 function update_firewall_config() {
     if backup_firewall_config; then
-        if download_firewall_config && reload_firewall_config; then
-            echo "INFO: Firewall config succesfully updated and loaded."
-        elif restore_firewall_config && reload_firewall_config; then
-            echo "WARN: Firewall config update/load failed, but sucessfully restored and loaded."
+        if download_firewall_config; then
+            if compate_firewall_config; then
+                echo "INFO: The downloaded firewall config does not contains changes. Skipping update."
+            elif reload_firewall_config; then
+                echo "INFO: Firewall config succesfully updated and loaded."
+            elif restore_firewall_config && reload_firewall_config; then
+                echo "WARN: Firewall config update/load failed, but sucessfully restored and loaded."
+            else
+                echo "ERROR: Firewall config failed to update/load and failed to restore/load."
+                return 1
+            fi
         else
-            echo "ERROR: Firewall config failed to update/load and failed to restore/load."
+            echo "ERROR: Failed to download firewall config!"
+            return 1
         fi
     else
         echo "ERROR: Failed to backup firewall config!"
+        return 1
     fi
 }
 
@@ -352,17 +379,30 @@ function reload_docker_daemon_config() {
     start_docker_daemon
 }
 
+function compare_docker_config() {
+    compare_files "${DOCKER_CONFIG_FILE_PATH}" "${DOCKER_BACKUP_FILE_PATH}"
+}
+
 function update_docker_config() {
     if backup_docker_daemon_config; then
-        if download_docker_daemon_config && reload_docker_daemon_config; then
-            echo "INFO: Docker daemon config succesfully updated and loaded."
-        elif restore_docker_daemon_config && reload_docker_daemon_config; then
-            echo "WARN: Docker daemon config update/load failed, but sucessfully restored and loaded."
+        if download_docker_daemon_config; then
+            if compare_docker_config; then
+                echo "INFO: The downloaded docker daemon config does not contains changes. Skipping update."
+            elif reload_docker_daemon_config; then
+                echo "INFO: Docker daemon config succesfully updated and loaded."
+            elif restore_docker_daemon_config && reload_docker_daemon_config; then
+                echo "WARN: Docker daemon config update/load failed, but sucessfully restored and loaded."
+            else
+                echo "ERROR: Docker daemon config failed to update/load and failed to restore/load."
+                return 1
+            fi
         else
-            echo "ERROR: Docker daemon config failed to update/load and failed to restore/load."
+            echo "ERROR: Failed to download docker daemon config!"
+            return 1
         fi
     else
         echo "ERROR: Failed to backup docker daemon config."
+        return 1
     fi
 }
 
@@ -726,32 +766,64 @@ function download_docker_project() {
     local project; project="$(get_project_name)"
     local docker_project_dir="${DOCKER_PROJECT_BASE_DIR}/${project}"
     local docker_project_file_path="${docker_project_dir}/${DOCKER_PROJECT_FILE_NAME}"
+    local docker_project_temp_file_path="/tmp/${DOCKER_PROJECT_FILE_NAME}.temp"
     local docker_project_env_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_FILE_NAME}"
     local docker_project_env_enc_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_ENC_FILE_NAME}"
-    
-    if download_from_github "${docker_project_file_path}" "${GITHUB_DOCKER_COMPOSE_FILE_URL}"; then
-        chown ${DOCKER_USER}:${DOCKER_USER} "${docker_project_file_path}"
-        echo "INFO: Docker compose file successfully downloaded."
-    else
-        echo "WARN: Failed to download docker compose file from github!"
-    fi
+    local docker_project_temp_env_enc_file_path="/tmp/${DOCKER_PROJECT_ENV_ENC_FILE_NAME}.temp"
 
-    if download_from_github "${docker_project_env_enc_file_path}" "${GITHUB_DOCKER_COMPOSE_ENV_FILE_URL}"; then
-        chown ${DOCKER_USER}:${DOCKER_USER} "${docker_project_env_enc_file_path}"
-        echo "INFO: Encrypted docker compose env file successfully downloaded."
-
-        if decrypt_file "${docker_project_env_enc_file_path}" "${docker_project_env_file_path}"; then
-            chown ${DOCKER_USER}:${DOCKER_USER} "${docker_project_env_file_path}"
-            echo "INFO: Encrypted docker compose env file sucessfuly decrypted!"
+    if download_from_github "${docker_project_temp_file_path}" "${GITHUB_DOCKER_COMPOSE_FILE_URL}" && download_from_github "${docker_project_temp_env_enc_file_path}" "${GITHUB_DOCKER_COMPOSE_ENV_FILE_URL}"; then
+        if compare_files "${docker_project_temp_file_path}" "${docker_project_file_path}" && compare_files "${docker_project_temp_env_enc_file_path}" "${docker_project_env_enc_file_path}"; then
+            echo "INFO: The docker compose files does not contains any changes. Skipping update."
+            return 1
         else
-            echo "ERROR: Failed to decrypt docker compose env file!"
+            move_file "${docker_project_temp_file_path}" "${docker_project_file_path}"
+            chown ${DOCKER_USER}:${DOCKER_USER} "${docker_project_file_path}"
+            echo "INFO: Docker compose file successfully downloaded."
+
+            move_file "${docker_project_temp_env_enc_file_path}" "${docker_project_env_enc_file_path}"
+            chown ${DOCKER_USER}:${DOCKER_USER} "${docker_project_env_enc_file_path}"
+            echo "INFO: Encrypted docker compose env file successfully downloaded."
+
+            if decrypt_file "${docker_project_env_enc_file_path}" "${docker_project_env_file_path}"; then
+                chown ${DOCKER_USER}:${DOCKER_USER} "${docker_project_env_file_path}"
+                echo "INFO: Encrypted docker compose env file sucessfuly decrypted!"
+            else
+                echo "ERROR: Failed to decrypt docker compose env file!"
+                return 1
+            fi
         fi
     else
-        echo "WARN: Failed to download encrypted docker compose env file from github!"
+        echo "ERROR: Failed to download docker project files from github!"
+        return 1
     fi
-    
 
     return 0
+}
+
+function compare_docker_project() {
+    local project; project="$(get_project_name)"
+    local docker_project_dir="${DOCKER_PROJECT_BASE_DIR}/${project}"
+    local docker_project_file_path="${docker_project_dir}/${DOCKER_PROJECT_FILE_NAME}"
+    local docker_project_env_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_FILE_NAME}"
+    local docker_project_env_enc_file_path="${docker_project_dir}/${DOCKER_PROJECT_ENV_ENC_FILE_NAME}"
+    local new_docker_project_hash;
+    local old_docker_project_hash;
+    local new_docker_project_env_hash;
+    local old_docker_project_env_hash;
+    
+
+    new_docker_project_hash="$(curl -fsSL "${GITHUB_DOCKER_COMPOSE_ENV_FILE_URL}" | sha1sum)"
+    old_docker_project_hash="$(cat ${docker_project_file_path} | sha1sum)"
+    
+    new_docker_project_env_hash="$(curl -fsSL "${GITHUB_DOCKER_COMPOSE_ENV_FILE_URL}" | sha1sum)"
+    old_docker_project_env_hash="$(cat ${docker_project_env_enc_file_path} | sha1sum)"
+    
+
+    if is_var_equals "${new_docker_project_hash}" "${old_docker_project_hash}" && is_var_equals "${new_docker_project_env_hash}" "${old_docker_project_env_hash}"; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 function check_docker_project() {
@@ -788,6 +860,11 @@ function update_docker_project() {
     else
         echo "ERROR: Failed to create docker project dir at ${docker_project_dir}"
         return 1
+    fi
+
+    if compare_docker_project; then
+        echo "INFO: The new docker project files does not contains any changes. Skipping update."
+        return 0
     fi
 
     stop_docker_project "${docker_project_dir}"
