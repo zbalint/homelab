@@ -1,11 +1,5 @@
 #!/bin/bash
 
-function encryption.generate_random_string() {
-    local length="$1"
-
-    openssl rand -hex "${length}"
-}
-
 function encryption.encrypt_file() {
     local key="$1"
     local plain_file="$2"
