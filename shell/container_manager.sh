@@ -22,4 +22,4 @@ source "${SCRIPT_LIB_DIR}/_random_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_encryption_lib.sh"
 
-log.info "$(random.get_number)"
+log.info "$(random.get_string)"

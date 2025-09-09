@@ -27,7 +27,7 @@ function random.get_string() {
     if [[ -n "${length}" ]]; then
         length=$((length/2))
     else
-        length=16
+        length=$(random.get_number 8 64)
     fi
 
     openssl rand -hex "${length}"
