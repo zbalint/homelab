@@ -51,6 +51,7 @@
         - name: Install required packages
           ansible.builtin.apt:
             name:
+              - git
               - bzip2
               - rsync
               - nftables

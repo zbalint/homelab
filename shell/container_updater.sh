@@ -1,0 +1,110 @@
+#!/bin/bash
+
+readonly HOMELAB_GIT_REPOSITORY_URL="https://github.com/zbalint/homelab.git"
+readonly INSTALL_DIR="/root/homelab"
+readonly REPO_DIR="${INSTALL_DIR}/repo"
+readonly SECRET_DIR="${REPO_DIR}/secret"
+readonly SCRIPT_DIR="${REPO_DIR}/shell"
+readonly SERVICE_DIR="${REPO_DIR}/systemd"
+
+function is_var_equals() {
+    local var="$1"
+    local str="$2"
+
+    if [ "${var}" == "${str}" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function is_dir_exists() {
+    local dir="$1"
+
+    test -d "${dir}"
+}
+
+function create_dir() {
+    local dir="$1"
+
+    mkdir -p "${dir}" >/dev/null 2>&1
+}
+
+function compare_files() {
+    local file_1="$1"
+    local file_2="$2"
+
+    diff "${file_1}" "${file_2}" >/dev/null 2>&1
+}
+
+function copy_file() {
+    local src_file="$1"
+    local dst_file="$2"
+
+    /bin/cp -rf "${src_file}" "${dst_file}" >/dev/null 2>&1
+}
+
+function git_clone() {
+    local repository_url="$1"
+    local directory="$2"
+
+    git clone --quiet --single-branch --depth 1 "${repository_url}" "${directory}"
+}
+
+function git_pull() {
+    local repository_dir="$1"
+
+    cd "${repository_dir}" && git fetch --quiet && git reset --quiet --hard origin/master
+}
+
+function init_homelab_directory() {
+    local directory="$1"
+
+    if ! is_dir_exists "${directory}"; then
+        if create_dir "${directory}"; then
+            echo "INFO: Creating new directory at ${directory}."
+        else
+            echo "ERROR: Failed to create new directory at ${directory}."
+        fi
+    fi
+}
+
+function init_homelab_directories() {
+    init_homelab_directory "${INSTALL_DIR}"
+}
+
+function update_homelab_repo() {
+    if is_dir_exists "${REPO_DIR}"; then
+        echo "INFO: Updating homelab repository..."
+        if git_pull "${REPO_DIR}"; then
+            echo "INFO: Repository update was successful."
+            return 0
+        else
+            echo "ERROR: Repository updated failed!"
+            return 1
+        fi
+    else
+        echo "INFO: Cloning homelab repository..."
+        if git_clone "${HOMELAB_GIT_REPOSITORY_URL}" "${REPO_DIR}"; then
+            echo "INFO: Repository clone was successful."
+            return 0
+        else
+            echo "ERROR: Repository clone failed!"
+            return 1
+        fi
+    fi
+}
+
+function decrypt_secrets() {
+    cd "${REPO_DIR}" && bash decrypt_files.sh
+}
+
+function main() {
+    init_homelab_directories
+    update_homelab_repo
+    decrypt_secrets
+    bash "${REPO_DIR}/shell/container_manager.sh"
+    return 0
+}
+
+main
