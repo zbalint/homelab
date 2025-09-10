@@ -42,7 +42,7 @@ source "${SCRIPT_LIB_DIR}/_docker_project_lib.sh"
 
 function main() {
     firewall.update
-    # docker.daemon.update
+    docker.daemon.update
     return 0
 }
 
