@@ -55,7 +55,7 @@ function firewall.connectivity_check() {
         log.error "${MESSAGE_NETWORK_TAILSCALE_UNREACHABLE}"
         return 1
     fi
-    if ! network.ping "${CHECK_ADDRESS_TRAEFIK_PROXY_01}" || ! network.ping "${CHECK_ADDRESS_TRAEFIK_PROXY_02}"; then
+    if ! network.ping "${CHECK_ADDRESS_TRAEFIK_PROXY_01}" && ! network.ping "${CHECK_ADDRESS_TRAEFIK_PROXY_02}"; then
         log.error "${MESSAGE_NETWORK_TRAEFIK_UNREACHABLE}"
         return 1
     fi
@@ -82,7 +82,7 @@ function firewall.update() {
             if firewall.load_config "${firewall_new_config_path}" && firewall.reload && firewall.connectivity_check; then
                 log.info "${MESSAGE_FIREWALL_UPDATE_SUCCESSFUL}"
                 notification.info "Firewall" "${MESSAGE_FIREWALL_UPDATE_SUCCESSFUL}"
-            elif firewall.restore && firewall.reload; then
+            elif firewall.restore && firewall.reload && firewall.connectivity_check; then
                 log.warn "${MESSAGE_FIREWALL_UPDATE_FAILED}"
                 notification.warn "Firewall" "${MESSAGE_FIREWALL_UPDATE_FAILED}"
             else
