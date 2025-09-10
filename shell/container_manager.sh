@@ -46,3 +46,5 @@ function main() {
     firewall.update
     return 0
 }
+
+main
