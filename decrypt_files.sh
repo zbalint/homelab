@@ -38,7 +38,7 @@ function decrypt_files() {
     find -name "*${encrypted_file_postfix}" | while read -r encrypted_file
     do
         local decrypted_file="${encrypted_file%${encrypted_file_postfix}}${decrypted_file_postfix}"  
-        # echo "INFO: Decrypting ${encrypted_file} file to ${decrypted_file}"
+        echo "INFO: Decrypting ${encrypted_file} file to ${decrypted_file}"
         decrypt_file "${encrypted_file}" "${decrypted_file}"
     done
 }
