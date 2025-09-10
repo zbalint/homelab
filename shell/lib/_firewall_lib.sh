@@ -1,0 +1,68 @@
+#!/bin/bash
+
+readonly FIREWALL_CONFIG_DIRECTORY_PATH="${REPO_DIR}/firewall"
+readonly FIREWALL_CUSTOM_CONFIG_DIRECTORY_PATH="${REPO_DIR}/firewall/${CONTAINER_NAME}"
+readonly FIREWALL_CONFIG_FILE_NAME="nftables.conf"
+readonly FIREWALL_CONFIG_FILE_PATH="${FIREWALL_CONFIG_DIRECTORY_PATH}/${FIREWALL_CONFIG_FILE_NAME}"
+readonly FIREWALL_CUSTOM_CONFIG_FILE_PATH="${FIREWALL_CUSTOM_CONFIG_DIRECTORY_PATH}/${FIREWALL_CONFIG_FILE_NAME}"
+
+readonly FIREWALL_CONFIG_PROD_FILE_PATH="/etc/nftables.conf"
+readonly FIREWALL_CONFIG_BACKUP_FILE_PATH="/etc/nftables.conf.bak"
+
+
+readonly MESSAGE_FIREWALL_CONFIG_UNCHANGED="No changes detected in the firewall config."
+readonly MESSAGE_FIREWALL_CONFIG_CHANGE_DETECTED="Changes detected in the firewall config."
+readonly MESSAGE_FIREWALL_UPDATE_SUCCESSFUL="Firewall config successfully updated!"
+readonly MESSAGE_FIREWALL_UPDATE_FAILED="Failed to updated firewall config, but sucessfully restored!"
+readonly MESSAGE_FIREWALL_RESTORE_FAILED="Failed to restore firewall config!"
+readonly MESSAGE_FIREWALL_BACKUP_FAILED="Failed to backup firewall config!"
+
+function firewall.reload() {
+    systemctl reload nftables >/dev/null 2>&1
+}
+
+function firewall.backup() {
+    copy_file "${FIREWALL_CONFIG_PROD_FILE_PATH}" "${FIREWALL_CONFIG_BACKUP_FILE_PATH}"
+}
+
+function firewall.restore() {
+    copy_file "${FIREWALL_CONFIG_BACKUP_FILE_PATH}" "${FIREWALL_CONFIG_PROD_FILE_PATH}"
+}
+
+function firewall.load_config() {
+    local config_file="$1"
+
+    copy_file "${config_file}" "${FIREWALL_CONFIG_PROD_FILE_PATH}"
+}
+
+function firewall.update() {
+    local firewall_new_config_path
+    local firewall_old_config_path; firewall_old_config_path="${firewall_old_config_path}"
+
+    if common.is_file_exists "${FIREWALL_CUSTOM_CONFIG_FILE_PATH}"; then
+        firewall_new_config_path="${FIREWALL_CUSTOM_CONFIG_FILE_PATH}"
+    else
+        firewall_new_config_path="${FIREWALL_CONFIG_FILE_PATH}"
+    fi
+
+    if common.compare_files "${firewall_new_config_path}" "${firewall_old_config_path}"; then
+        log.info "${MESSAGE_FIREWALL_CONFIG_UNCHANGED}"
+    else
+        log.info "${MESSAGE_FIREWALL_CONFIG_CHANGE_DETECTED}"
+        if firewall.backup; then
+            if firewall.load_config "${firewall_new_config_path}" && firewall.reload; then
+                log.info "${MESSAGE_FIREWALL_UPDATE_SUCCESSFUL}"
+                notification.info "Firewall" "${MESSAGE_FIREWALL_UPDATE_SUCCESSFUL}"
+            elif firewall.restore && firewall.reload; then
+                log.warn "${MESSAGE_FIREWALL_UPDATE_FAILED}"
+                notification.warn "Firewall" "${MESSAGE_FIREWALL_UPDATE_FAILED}"
+            else
+                log.error "${MESSAGE_FIREWALL_RESTORE_FAILED}"
+                notification.error "Firewall" "${MESSAGE_FIREWALL_RESTORE_FAILED}"
+            fi
+        else
+            log.error "${MESSAGE_FIREWALL_BACKUP_FAILED}"
+            notification.error "Firewall" "${MESSAGE_FIREWALL_BACKUP_FAILED}"
+        fi
+    fi
+}

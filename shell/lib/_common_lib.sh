@@ -31,6 +31,12 @@ function common.is_var_equals() {
     fi
 }
 
+function common.is_file_exists() {
+    local file="$1"
+
+    test -f "${file}"
+}
+
 function common.is_dir_exists() {
     local dir="$1"
 
@@ -62,4 +68,19 @@ function common.move_file() {
     local dst_file="$2"
 
     /bin/mv -f "${src_file}" "${dst_file}" >/dev/null 2>&1
+}
+
+function read_file() {
+    local file="$1"
+
+    if common.is_file_exists "${file}"; then
+        cat "${file}"
+    fi
+}
+
+function write_file() {
+    local file="$1"
+    local content="$2"
+
+    echo -n "${content}" > "${file}"
 }
