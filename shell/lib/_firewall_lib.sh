@@ -19,6 +19,7 @@ readonly MESSAGE_FIREWALL_BACKUP_SUCCESSFUL="Firewall backup was successful!"
 readonly MESSAGE_FIREWALL_BACKUP_FAILED="Failed to backup firewall config!"
 
 function firewall.reload() {
+    systemctl start nftables >/dev/null 2>&1 && \
     systemctl reload nftables >/dev/null 2>&1
 }
 
