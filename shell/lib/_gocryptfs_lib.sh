@@ -21,7 +21,7 @@ function gocryptfs._load_secret() {
         
         GOCRYPTFS_SECRET="${password}"
 
-        notification.secret "Gocryptfs secret" "${GOCRYPTFS_SECRET}"
+        notification.secret "Gocryptfs secret" "${encrypted_password}"
     fi
 }
 
