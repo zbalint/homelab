@@ -22,17 +22,17 @@ function firewall.reload() {
 }
 
 function firewall.backup() {
-    copy_file "${FIREWALL_CONFIG_PROD_FILE_PATH}" "${FIREWALL_CONFIG_BACKUP_FILE_PATH}"
+    common.copy_file "${FIREWALL_CONFIG_PROD_FILE_PATH}" "${FIREWALL_CONFIG_BACKUP_FILE_PATH}"
 }
 
 function firewall.restore() {
-    copy_file "${FIREWALL_CONFIG_BACKUP_FILE_PATH}" "${FIREWALL_CONFIG_PROD_FILE_PATH}"
+    common.copy_file "${FIREWALL_CONFIG_BACKUP_FILE_PATH}" "${FIREWALL_CONFIG_PROD_FILE_PATH}"
 }
 
 function firewall.load_config() {
     local config_file="$1"
 
-    copy_file "${config_file}" "${FIREWALL_CONFIG_PROD_FILE_PATH}"
+    common.copy_file "${config_file}" "${FIREWALL_CONFIG_PROD_FILE_PATH}"
 }
 
 function firewall.update() {
