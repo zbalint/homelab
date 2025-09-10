@@ -1,7 +1,7 @@
 #!/bin/bash
 
 readonly GOCRYPTFS_PASSWORD_LENGTH=64
-readonly GOCRYPTFS_SECRET_FILE_PATH="${SECRET_DIR}/.gocryptfs_secret.enc"
+readonly GOCRYPTFS_SECRET_FILE_PATH="${LOCAL_SECRET_DIR}/.gocryptfs_secret.enc"
 declare GOCRYPTFS_SECRET
 
 function gocryptfs._load_secret() {

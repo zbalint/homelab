@@ -11,6 +11,7 @@ readonly SCRIPT_DIR="${REPO_DIR}/shell"
 readonly SCRIPT_LIB_DIR="${SCRIPT_DIR}/lib"
 
 readonly GLOBAL_SECRET_DIR="/secret"
+readonly LOCAL_SECRET_DIR="${INSTALL_DIR}/secret"
 readonly ENCRYPTION_KEY_FILE_PATH="${GLOBAL_SECRET_DIR}/.encryption_key"
 
 readonly LOG_LEVEL="DEBUG"
@@ -23,7 +24,7 @@ source "${SCRIPT_LIB_DIR}/_common_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_random_lib.sh"
 # shellcheck disable=SC1090
-# source "${SCRIPT_LIB_DIR}/_encryption_lib.sh"
+source "${SCRIPT_LIB_DIR}/_encryption_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_network_lib.sh"
 # shellcheck disable=SC1090
@@ -31,11 +32,11 @@ source "${SCRIPT_LIB_DIR}/_notification_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_firewall_lib.sh"
 # shellcheck disable=SC1090
-# source "${SCRIPT_LIB_DIR}/_gocryptfs_lib.sh"
+source "${SCRIPT_LIB_DIR}/_gocryptfs_lib.sh"
 # shellcheck disable=SC1090
-# source "${SCRIPT_LIB_DIR}/_docker_daemon_lib.sh"
+source "${SCRIPT_LIB_DIR}/_docker_daemon_lib.sh"
 # shellcheck disable=SC1090
-# source "${SCRIPT_LIB_DIR}/_docker_project_lib.sh"
+source "${SCRIPT_LIB_DIR}/_docker_project_lib.sh"
 
 
 
