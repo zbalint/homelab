@@ -13,19 +13,6 @@ readonly SCRIPT_LIB_DIR="${SCRIPT_DIR}/lib"
 readonly LOG_LEVEL="DEBUG"
 readonly LOG_FILE="${LOG_DIR}/container_manager_$(date +%Y%m%d).log"
 
-readonly GOTIFY_URL="https://gotify.lab.escapethelan.com/message"
-readonly DISCORD_URL="https://discord.com/api/webhooks"
-
-readonly GOTIFY_NOTIFICATION_CHANNEL_SECRET_FILE="${REPO_DIR}/secret/.gotify_notification_channel_secret"
-readonly GOTIFY_SECRET_CHANNEL_SECRET_FILE="${REPO_DIR}/secret/.gotify_secret_channel_secret"
-readonly DISCORD_NOTIFICATION_CHANNEL_SECRET_FILE="${REPO_DIR}/secret/.discord_notification_channel_secret"
-readonly DISCORD_SECRET_CHANNEL_SECRET_FILE="${REPO_DIR}/secret/.discord_secret_channel_secret"
-
-readonly GOTIFY_NOTIFICATION_CHANNEL_SECRET="$(cat "${GOTIFY_NOTIFICATION_CHANNEL_SECRET_FILE}")"
-readonly GOTIFY_SECRET_CHANNEL_SECRET="$(cat "${GOTIFY_SECRET_CHANNEL_SECRET_FILE}")"
-readonly DISCORD_NOTIFICATION_CHANNEL_SECRET="$(cat "${DISCORD_NOTIFICATION_CHANNEL_SECRET_FILE}")"
-readonly DISCORD_SECRET_CHANNEL_SECRET="$(cat "${DISCORD_SECRET_CHANNEL_SECRET_FILE}")"
-
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_log_lib.sh"
 # shellcheck disable=SC1090

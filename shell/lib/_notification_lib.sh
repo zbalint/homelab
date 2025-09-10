@@ -1,5 +1,18 @@
 #!/bin/bash
 
+readonly GOTIFY_URL="https://gotify.lab.escapethelan.com/message"
+readonly DISCORD_URL="https://discord.com/api/webhooks"
+
+readonly GOTIFY_NOTIFICATION_CHANNEL_SECRET_FILE="${REPO_DIR}/secret/.gotify_notification_channel_secret"
+readonly GOTIFY_SECRET_CHANNEL_SECRET_FILE="${REPO_DIR}/secret/.gotify_secret_channel_secret"
+readonly DISCORD_NOTIFICATION_CHANNEL_SECRET_FILE="${REPO_DIR}/secret/.discord_notification_channel_secret"
+readonly DISCORD_SECRET_CHANNEL_SECRET_FILE="${REPO_DIR}/secret/.discord_secret_channel_secret"
+
+readonly GOTIFY_NOTIFICATION_CHANNEL_SECRET="$(cat "${GOTIFY_NOTIFICATION_CHANNEL_SECRET_FILE}")"
+readonly GOTIFY_SECRET_CHANNEL_SECRET="$(cat "${GOTIFY_SECRET_CHANNEL_SECRET_FILE}")"
+readonly DISCORD_NOTIFICATION_CHANNEL_SECRET="$(cat "${DISCORD_NOTIFICATION_CHANNEL_SECRET_FILE}")"
+readonly DISCORD_SECRET_CHANNEL_SECRET="$(cat "${DISCORD_SECRET_CHANNEL_SECRET_FILE}")"
+
 function notification.send_to_gotify() {
     local url="$1"
     local secret="$2"
