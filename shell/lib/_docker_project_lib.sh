@@ -1,7 +1,5 @@
 #!/bin/bash
 
-readonly PROJECT_NAME="${CONTAINER_NAME}"
-readonly PROJECT_BASE_NAME="${PROJECT_NAME%-0*}"
 readonly DOCKER_PROJECT_NAME="${PROJECT_BASE_NAME#lxc-}"
 
 readonly DOCKER_PROJECT_DIRECTORY_PATH="${REPO_DIR}/docker"
@@ -40,7 +38,7 @@ function docker.project.reload() {
 
 function docker.project.backup() {
     if gocryptfs.init_reverse_volume "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"; then
-        
+
     else
         log.error "Failed to initialize reverse gocryptfs volume at ${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"
     fi

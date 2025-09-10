@@ -1,6 +1,6 @@
 #!/bin/bash
 
-declare ENCRYPTION_KEY; ENCRYPTION_KEY="$(read_file "${ENCRYPTION_KEY_FILE_PATH}")"
+declare ENCRYPTION_KEY; ENCRYPTION_KEY="$(common.read_file "${ENCRYPTION_KEY_FILE_PATH}")"
 
 function encryption.encrypt_file() {
     local key; key="${ENCRYPTION_KEY}"
