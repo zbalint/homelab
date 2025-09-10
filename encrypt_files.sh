@@ -35,7 +35,6 @@ function encrypt_files() {
     local decrypted_file_postfix="$1"
     local encrypted_file_postfix="$2"
 
-    echo "INFO: Encrypting files..."
     find -name "*${decrypted_file_postfix}" | while read -r decrypted_file
     do
         local encrypted_file="${decrypted_file%${decrypted_file_postfix}}${encrypted_file_postfix}"  
@@ -45,6 +44,7 @@ function encrypt_files() {
 }
 
 function main() {
+    echo "INFO: Encrypting files..."
     encrypt_files ".env" "env.enc"
     encrypt_files "_secret" "_secret.enc"
     return 0
