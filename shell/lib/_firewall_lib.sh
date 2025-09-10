@@ -39,7 +39,7 @@ function firewall.load_config() {
 
 function firewall.update() {
     local firewall_new_config_path
-    local firewall_old_config_path; firewall_old_config_path="${firewall_old_config_path}"
+    local firewall_old_config_path; firewall_old_config_path="${FIREWALL_CONFIG_PROD_FILE_PATH}"
 
     if common.is_file_exists "${FIREWALL_CUSTOM_CONFIG_FILE_PATH}"; then
         firewall_new_config_path="${FIREWALL_CUSTOM_CONFIG_FILE_PATH}"
