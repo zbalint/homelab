@@ -40,12 +40,8 @@ source "${SCRIPT_LIB_DIR}/_docker_project_lib.sh"
 
 
 function main() {
-    # firewall.update
-    # docker.daemon.update
-    PROJECT_NAME="lxc-test-01"
-    PROJECT_BASE_NAME="${PROJECT_NAME%-0*}"
-    DOCKER_PROJECT_NAME="${PROJECT_BASE_NAME#lxc-}"
-    echo $DOCKER_PROJECT_NAME
+    firewall.update
+    docker.daemon.update
     return 0
 }
 
