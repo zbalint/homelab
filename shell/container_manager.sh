@@ -23,7 +23,7 @@ source "${SCRIPT_LIB_DIR}/_common_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_random_lib.sh"
 # shellcheck disable=SC1090
-source "${SCRIPT_LIB_DIR}/_encryption_lib.sh"
+# source "${SCRIPT_LIB_DIR}/_encryption_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_network_lib.sh"
 # shellcheck disable=SC1090
