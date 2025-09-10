@@ -1,12 +1,11 @@
 #!/bin/bash
 
 readonly CONTAINER_NAME="$(hostname)"
-# readonly INSTALL_DIR="."
 readonly INSTALL_DIR="/root/homelab"
 readonly LOG_DIR="${INSTALL_DIR}/log"
 readonly TEMP_DIR="${INSTALL_DIR}/temp"
-readonly REPO_DIR="."
-# readonly REPO_DIR="${INSTALL_DIR}/repo"
+# readonly REPO_DIR="."
+readonly REPO_DIR="${INSTALL_DIR}/repo"
 readonly SECRET_DIR="${REPO_DIR}/secret"
 readonly SCRIPT_DIR="${REPO_DIR}/shell"
 readonly SCRIPT_LIB_DIR="${SCRIPT_DIR}/lib"
