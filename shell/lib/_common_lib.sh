@@ -70,7 +70,7 @@ function common.move_file() {
     /bin/mv -f "${src_file}" "${dst_file}" >/dev/null 2>&1
 }
 
-function read_file() {
+function common.read_file() {
     local file="$1"
 
     if common.is_file_exists "${file}"; then
@@ -78,7 +78,7 @@ function read_file() {
     fi
 }
 
-function write_file() {
+function common.write_file() {
     local file="$1"
     local content="$2"
 
