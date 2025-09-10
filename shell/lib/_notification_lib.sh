@@ -109,7 +109,6 @@ function notification.send() {
 function notification.info() {
     local title="$1"
     local message="$2"
-    local priority="$3"
 
     notification.send "INFO" "${title}" "${message}" "1"
 }
@@ -117,7 +116,6 @@ function notification.info() {
 function notification.warn() {
     local title="$1"
     local message="$2"
-    local priority="$3"
 
     notification.send "WARN" "${title}" "${message}" "5"
 }
@@ -125,7 +123,6 @@ function notification.warn() {
 function notification.error() {
     local title="$1"
     local message="$2"
-    local priority="$3"
 
     notification.send "ERROR" "${title}" "${message}" "10"
 }
@@ -133,7 +130,6 @@ function notification.error() {
 function notification.secret() {
     local title="$1"
     local message="$2"
-    local priority="$3"
 
     notification.send "SECRET" "${title}" "${message}" "10"
 }

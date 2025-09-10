@@ -45,10 +45,6 @@ function docker.daemon.restore() {
     common.copy_file "${DOCKER_DAEMON_CONFIG_BACKUP_FILE_PATH}" "${DOCKER_DAEMON_CONFIG_PROD_FILE_PATH}"
 }
 
-function docker.daemon.check() {
-    return 0
-}
-
 function docker.daemon.load_config() {
     local config_file="$1"
 

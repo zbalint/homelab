@@ -1,5 +1,30 @@
 #!/bin/bash
 
+readonly GOCRYPTFS_PASSWORD_LENGTH=64
+readonly GOCRYPTFS_SECRET_FILE_PATH="${SECRET_DIR}/.gocryptfs_secret.enc"
+declare GOCRYPTFS_SECRET
+
+function gocryptfs._load_secret() {
+    local secret_file_path="${GOCRYPTFS_SECRET_FILE_PATH}"
+
+    if common.is_file_exists "${secret_file_path}"; then
+        local encrypted_password; encrypted_password="$(common.read_file "${secret_file_path}")"
+        local password; password="$(encryption.decrypt_string "${encrypted_password}")"
+        
+        GOCRYPTFS_SECRET="${password}"
+    else
+
+        password="$(random.get_string ${GOCRYPTFS_PASSWORD_LENGTH})"
+        encrypted_password="$(encryption.encrypt_string "${password}")"
+
+        common.write_file "${GOCRYPTFS_SECRET_FILE_PATH}" "${encrypted_password}"
+        
+        GOCRYPTFS_SECRET="${password}"
+
+        notification.secret "Gocryptfs secret" "${GOCRYPTFS_SECRET}"
+    fi
+}
+
 function gocryptfs._is_dir_mounted() {
     local directory="$1"
 
@@ -68,3 +93,21 @@ function gocryptfs.mount_reverse_volume() {
     fi
 }
 
+function gocryptfs.unmount() {
+    local volume="$1"
+
+    if common.is_dir_mounted "${volume}"; then
+        if umount "${volume}"; then
+            log.info "Gocrypfs directory unmounted at ${volume}"
+            return 0
+        else
+            log.error "Failed to unmount gocryptfs directory at ${volume}"
+            return 1
+        fi
+    else
+        log.warn "WARN: Gocrypfs directory already unmounted at ${volume}"
+        return 0
+    fi
+}
+
+gocryptfs._load_secret
