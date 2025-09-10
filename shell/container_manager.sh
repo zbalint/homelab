@@ -10,7 +10,7 @@ readonly SECRET_DIR="${REPO_DIR}/secret"
 readonly SCRIPT_DIR="${REPO_DIR}/shell"
 readonly SCRIPT_LIB_DIR="${SCRIPT_DIR}/lib"
 
-readonly GLOBAL_SECRET_DIR="/secrets"
+readonly GLOBAL_SECRET_DIR="/secret"
 readonly ENCRYPTION_KEY_FILE_PATH="${GLOBAL_SECRET_DIR}/.encryption_key"
 
 readonly LOG_LEVEL="DEBUG"
