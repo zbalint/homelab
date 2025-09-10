@@ -15,6 +15,7 @@ readonly MESSAGE_FIREWALL_CONFIG_CHANGE_DETECTED="Changes detected in the firewa
 readonly MESSAGE_FIREWALL_UPDATE_SUCCESSFUL="Firewall config successfully updated!"
 readonly MESSAGE_FIREWALL_UPDATE_FAILED="Failed to updated firewall config, but sucessfully restored!"
 readonly MESSAGE_FIREWALL_RESTORE_FAILED="Failed to restore firewall config!"
+readonly MESSAGE_FIREWALL_BACKUP_SUCCESSFUL="Firewall backup was successful!"
 readonly MESSAGE_FIREWALL_BACKUP_FAILED="Failed to backup firewall config!"
 
 function firewall.reload() {
@@ -50,6 +51,7 @@ function firewall.update() {
     else
         log.info "${MESSAGE_FIREWALL_CONFIG_CHANGE_DETECTED}"
         if firewall.backup; then
+            log.info "${MESSAGE_FIREWALL_BACKUP_SUCCESSFUL}"
             if firewall.load_config "${firewall_new_config_path}" && firewall.reload; then
                 log.info "${MESSAGE_FIREWALL_UPDATE_SUCCESSFUL}"
                 notification.info "Firewall" "${MESSAGE_FIREWALL_UPDATE_SUCCESSFUL}"
