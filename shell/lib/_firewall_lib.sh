@@ -22,9 +22,9 @@ readonly MESSAGE_NETWORK_TRAEFIK_UNREACHABLE="Could not reach reverse proxy at a
 readonly MESSAGE_FIREWALL_CONFIG_UNCHANGED="No changes detected in the firewall config."
 readonly MESSAGE_FIREWALL_CONFIG_CHANGE_DETECTED="Changes detected in the firewall config."
 readonly MESSAGE_FIREWALL_UPDATE_SUCCESSFUL="Firewall config successfully updated!"
-readonly MESSAGE_FIREWALL_UPDATE_FAILED="Failed to updated firewall config, but sucessfully restored!"
+readonly MESSAGE_FIREWALL_UPDATE_FAILED="Failed to update firewall config, but sucessfully restored!"
 readonly MESSAGE_FIREWALL_RESTORE_FAILED="Failed to restore firewall config!"
-readonly MESSAGE_FIREWALL_BACKUP_SUCCESSFUL="Firewall backup was successful!"
+readonly MESSAGE_FIREWALL_BACKUP_SUCCESSFUL="Firewall config backup was successful!"
 readonly MESSAGE_FIREWALL_BACKUP_FAILED="Failed to backup firewall config!"
 
 function firewall.reload() {
@@ -69,8 +69,10 @@ function firewall.update() {
 
     if common.is_file_exists "${FIREWALL_CUSTOM_CONFIG_FILE_PATH}"; then
         firewall_new_config_path="${FIREWALL_CUSTOM_CONFIG_FILE_PATH}"
+        log.info "Found custom firewall config at ${firewall_new_config_path}"
     else
         firewall_new_config_path="${FIREWALL_CONFIG_FILE_PATH}"
+        log.info "Found default firewall config at ${firewall_new_config_path}"
     fi
 
     if common.compare_files "${firewall_new_config_path}" "${firewall_old_config_path}"; then

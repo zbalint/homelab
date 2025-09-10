@@ -27,10 +27,16 @@ source "${SCRIPT_LIB_DIR}/_network_lib.sh"
 source "${SCRIPT_LIB_DIR}/_notification_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_firewall_lib.sh"
+# shellcheck disable=SC1090
+source "${SCRIPT_LIB_DIR}/_gocryptfs_lib.sh"
+# shellcheck disable=SC1090
+source "${SCRIPT_LIB_DIR}/_docker_lib.sh"
+
 
 
 function main() {
     firewall.update
+    docker.daemon.update
     return 0
 }
 
