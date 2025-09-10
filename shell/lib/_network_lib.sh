@@ -1,8 +1,7 @@
 #!/bin/bash
 
-function network.curl() {
-    local params="$*"
+function network.ping() {
+    local address="$1"
 
-    # shellcheck disable=SC2086
-    curl --insecure -m 10 --retry 3 ${params}
+     ping -q -c 3 "${address}" >/dev/null 2>&1
 }
