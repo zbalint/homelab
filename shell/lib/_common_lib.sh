@@ -1,5 +1,25 @@
 #!/bin/bash
 
+function common.is_var_set() {
+    local var="$1"
+
+    if [[ -n "${var}" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function common.is_var_empty() {
+    local var="$1"
+
+    if [[ -z "${var}" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 function common.is_var_equals() {
     local var="$1"
     local str="$2"
