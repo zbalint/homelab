@@ -26,12 +26,16 @@ readonly GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE="/tmp/.gocryptfs.reverse.conf"
 
 
 function docker.project.stop() {
+    log.debug "Stopping docker project... (delay 5sec)"
+
     cd "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}" >/dev/null 2>&1 && \
     docker compose down >/dev/null 2>&1 && \
     sleep 5
 }
 
 function docker.project.start() {
+    log.debug "Starting docker project... (delay 5sec)"
+
     cd "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}" >/dev/null 2>&1 && \
     docker compose pull >/dev/null 2>&1 && \
     docker compose up -d >/dev/null 2>&1 && \
@@ -40,6 +44,7 @@ function docker.project.start() {
 }
 
 function docker.project.reload() {
+    log.debug "Restarting docker project..."
     docker.project.stop && docker.project.start
 }
 
@@ -132,9 +137,9 @@ function docker.project.check() {
     
     while IFS= read -r container; do
         if docker ps | grep "${container}" >/dev/null 2>&1; then
-            log.debug "${container} is running."
+            log.debug "Container ${container} is running."
         else
-            log.debug "${container} is not running!"
+            log.debug "Container ${container} is not running!"
             status=1
         fi
     done < "${temp_file}"
@@ -145,6 +150,7 @@ function docker.project.check() {
 }
 
 function docker.project.copy() {
+    log.debug "Copying ${DOCKER_PROJECT_TEMP_DIRECTORY_PATH} content to ${DOCKER_PROJECT_PROD_DIRECTORY_PATH}."
     common.copy_directory "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"
 }
 
