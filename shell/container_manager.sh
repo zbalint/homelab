@@ -14,7 +14,7 @@ readonly GLOBAL_SECRET_DIR="/secret"
 readonly LOCAL_SECRET_DIR="${INSTALL_DIR}/secret"
 readonly ENCRYPTION_KEY_FILE_PATH="${GLOBAL_SECRET_DIR}/.encryption_key"
 
-readonly LOG_LEVEL="INFO"
+readonly LOG_LEVEL="DEBUG"
 readonly LOG_FILE="${LOG_DIR}/container_manager_$(date +%Y%m%d).log"
 
 # shellcheck disable=SC1090

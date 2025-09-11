@@ -18,6 +18,7 @@ readonly DOCKER_PROJECT_TEMP_DIRECTORY_PATH="/tmp/${DOCKER_PROJECT_NAME}"
 readonly DOCKER_PROJECT_PROD_DIRECTORY_PATH="/opt/docker/stacks/${DOCKER_PROJECT_NAME}"
 readonly DOCKER_PROJECT_PLAIN_DIRECTORY_PATH="/opt/docker"
 readonly DOCKER_PROJECT_CYPHER_DIRECTORY_PATH="/mnt/gocryptfs/cypher/docker"
+readonly DOCKER_PROJECT_RESTORE_DIRECTORY_PATH="/mnt/gocryptfs/plain/docker"
 readonly DOCKER_PROJECT_BACKUP_DIRECTORY_PATH="/backup/${CONTAINER_NAME}/docker"
 
 
@@ -47,26 +48,53 @@ function docker.project.backup() {
             if ! common.is_dir_exists "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}" && common.create_directory "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"; then
                 log.debug "Creating backup directory at ${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"
             fi
+            
             if common.copy_directory "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}" "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"; then
-                log.info "Docker project backup was successful."
+                gocryptfs.unmount "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
+                return 0
             else
-                log.error "Docker project backup failed!"
+                gocryptfs.unmount "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
+                return 1
             fi
-            gocryptfs.unmount "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
         else
             log.error "Failed to mount reverse gocryptfs volume at ${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"
+            return 1
         fi
     else
         log.error "Failed to initialize reverse gocryptfs volume at ${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"
+        return 1
     fi
-    return 0
 }
 
 function docker.project.restore() {
-    return 0
+    if ! common.is_dir_exists "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"; then
+        log.debug "Backup directory does not exists at ${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
+        return 1
+    fi
+
+    if ! common.is_dir_exists "${DOCKER_PROJECT_RESTORE_DIRECTORY_PATH}" && common.create_directory "${DOCKER_PROJECT_RESTORE_DIRECTORY_PATH}"; then
+        log.debug "Creating directory for gocryptfs plain volume at ${DOCKER_PROJECT_RESTORE_DIRECTORY_PATH}"
+    fi
+
+    if gocryptfs.mount_normal_volume "${DOCKER_PROJECT_RESTORE_DIRECTORY_PATH}" "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"; then
+        if ! common.is_dir_exists "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}" && common.create_directory "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"; then
+            log.debug "Creating project directory at ${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"
+        fi
+        
+        if common.copy_directory "${DOCKER_PROJECT_RESTORE_DIRECTORY_PATH}" "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"; then
+            gocryptfs.unmount "${DOCKER_PROJECT_RESTORE_DIRECTORY_PATH}"
+            return 0
+        else
+            gocryptfs.unmount "${DOCKER_PROJECT_RESTORE_DIRECTORY_PATH}"
+            return 1
+        fi
+    else
+        log.error "Failed to mount gocryptfs volume at ${DOCKER_PROJECT_RESTORE_DIRECTORY_PATH}"
+        return 1
+    fi
 }
 
-function docker.project.check() {
+function docker.project.compare() {
     if ! common.is_dir_exists "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" && common.create_directory "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}"; then
         log.debug "Creating temp directory at ${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
     fi
@@ -79,21 +107,44 @@ function docker.project.check() {
         log.debug "Copying ${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH} content to ${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}."
     fi
 
-    if common.compare_directories "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"; then
-        log.info "${MESSAGE_DOCKER_PROJECT_UNCHANGED}"
-        return 1
-    else
-        log.info "${MESSAGE_DOCKER_PROJECT_CHANGE_DETECTED}"
-        return 0
-    fi
-    
+    common.compare_directories "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"
+}
 
-    return 0
+function docker.project.check() {
+    local docker_project_file_path="${DOCKER_PROJECT_PROD_DIRECTORY_PATH}/docker-compose.yaml"
+    local temp_file="/tmp/container_list"
+    local status=0
+
+    log.debug "Checking docker project health..."
+    grep "container_name" "${docker_project_file_path}" | awk '{print $2}' > "${temp_file}"
+    
+    while IFS= read -r container; do
+        if docker ps | grep "${container}" >/dev/null 2>&1; then
+            log.debug "${container} is running."
+        else
+            log.debug "${container} is not running!"
+            status=1
+        fi
+    done < "${temp_file}"
+
+    rm -f "${temp_file}"
+
+    return ${status}
 }
 
 function docker.project.update() {
-    if docker.project.check; then
-        docker.project.backup
+    docker.project.restore
+    return 0
+
+    if docker.project.compare; then
+        log.info "${MESSAGE_DOCKER_PROJECT_UNCHANGED}"
+    else
+        log.info "${MESSAGE_DOCKER_PROJECT_CHANGE_DETECTED}"
+        if docker.project.backup; then
+            log.info "${MESSAGE_DOCKER_PROJECT_BACKUP_SUCCESSFUL}"
+        else
+            log.error "${MESSAGE_DOCKER_PROJECT_BACKUP_FAILED}"  
+        fi
     fi
     
     return 0
