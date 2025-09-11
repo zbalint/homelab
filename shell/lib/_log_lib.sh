@@ -42,6 +42,20 @@ function log._get_level_id() {
     esac
 }
 
+function log_.log_to_file() {
+    local message="$*"
+
+    if ! test -d "${LOG_DIR}"; then
+        mkdir -p "${LOG_DIR}"
+    fi
+
+    if test -f "${LOG_FILE}"; then
+        echo "${message}" >> "${LOG_FILE}"
+    else
+        echo "${message}" > "${LOG_FILE}"
+    fi
+}
+
 function log._log() {
     local level="$1"; shift
     local allowed_level_id; allowed_level_id="$(log._get_level_id "${LOG_LEVEL}")";
@@ -51,6 +65,8 @@ function log._log() {
     if ((current_level_id>=allowed_level_id)); then
         echo "${level}: ${message}"
     fi
+
+    log_.log_to_file "${level}: ${message}"
 }
 
 function log.debug() {
