@@ -117,7 +117,7 @@ function docker.project.compare() {
         log.debug "Creating temp directory at ${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
     fi
 
-    if common.is_dir_exists "${DOCKER_PROJECT_CUSTOM_BASE_DIRECTORY_PATH}" && common.copy_directory "${DOCKER_PROJECT_CUSTOM_BASE_DIRECTORY_PATH}" "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}"; then
+    if common.is_dir_exists "${DOCKER_PROJECT_CUSTOM_BASE_DIRECTORY_PATH}" && common.replace_directory "${DOCKER_PROJECT_CUSTOM_BASE_DIRECTORY_PATH}" "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}"; then
         log.debug "Copying ${DOCKER_PROJECT_CUSTOM_BASE_DIRECTORY_PATH} content to ${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}."
     fi
     

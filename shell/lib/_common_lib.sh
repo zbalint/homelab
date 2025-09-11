@@ -121,5 +121,21 @@ function common.copy_directory() {
     fi
     
 
+    rsync -av "${source_dir}/" "${dest_dir}/" >/dev/null 2>&1
+}
+
+function common.replace_directory() {
+    local source_dir="$1"
+    local dest_dir="$2"
+
+    if common.is_var_empty "${source_dir}" || common.is_var_equals "${source_dir}" "/"; then
+        return 1
+    fi
+
+    if common.is_var_empty "${dest_dir}" || common.is_var_equals "${dest_dir}" "/"; then
+        return 1
+    fi
+    
+
     rsync -av --delete "${source_dir}/" "${dest_dir}/" >/dev/null 2>&1
 }
