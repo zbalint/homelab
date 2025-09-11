@@ -1,5 +1,7 @@
 #!/bin/bash
 
+declare FIRST_MESSAGE_FLAG="true"
+
 readonly _LOG_LEVEL_DEBUG=1
 readonly _LOG_LEVEL_INFO=2
 readonly _LOG_LEVEL_WARN=3
@@ -49,11 +51,16 @@ function log_.log_to_file() {
         mkdir -p "${LOG_DIR}"
     fi
 
-    if test -f "${LOG_FILE}"; then
-        echo "${message}" >> "${LOG_FILE}"
-    else
-        echo "${message}" > "${LOG_FILE}"
+    if [[ "${FIRST_MESSAGE_FLAG}" == "true" ]]; then
+        FIRST_MESSAGE_FLAG="false"
+        if test -f "${LOG_FILE}"; then
+            echo "======================== [$(date +"%Y-%m-%d %X")][$$] ========================" >> "${LOG_FILE}"
+        else
+            echo "======================== [$(date +"%Y-%m-%d %X")][$$] ========================" > "${LOG_FILE}"
+        fi
     fi
+
+    echo "${message}" >> "${LOG_FILE}"
 }
 
 function log._log() {
@@ -66,7 +73,7 @@ function log._log() {
         echo "${level}: ${message}"
     fi
 
-    log_.log_to_file "[$(date +"%Y-%m-%d %X")][${level}]: ${message}"
+    log_.log_to_file "[$(date +"%Y-%m-%d %X")][$$][${level}]: ${message}"
 }
 
 function log.debug() {
