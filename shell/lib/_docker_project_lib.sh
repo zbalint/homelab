@@ -39,7 +39,7 @@ function docker.project.reload() {
 
 function docker.project.backup() {
     if gocryptfs.init_reverse_volume "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"; then
-        if gocryptfs.mount_reverse_volume "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}" "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"; then
+        if common.create_directory "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}" && gocryptfs.mount_reverse_volume "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}" "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"; then
             common.create_directory "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"
             common.copy_directory "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}" "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"
             gocrypfs.unmount "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
