@@ -66,6 +66,13 @@ function common.compare_files() {
     diff "${file_1}" "${file_2}" >/dev/null 2>&1
 }
 
+function common.compare_directories() {
+    local directory_1="$1"
+    local directory_2="$2"
+
+    diff "${directory_1}/" "${directory_2}/" >/dev/null 2>&1
+}
+
 function common.copy_file() {
     local src_file="$1"
     local dst_file="$2"
