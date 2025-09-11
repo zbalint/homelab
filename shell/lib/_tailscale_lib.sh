@@ -119,11 +119,15 @@ function tailscale.update() {
             log.error "${MESSAGE_TAILSCALE_RESTORE_FAILED}"
         fi
     else
-        if tailscale.stop && tailscale.backup && tailscale.start; then
-            log.info "${MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL}"
+        if tailscale.status; then
+            if tailscale.stop && tailscale.backup && tailscale.start; then
+                log.info "${MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL}"
+            else
+                log.error "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
+                notification.error "Tailscale" "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
+            fi
         else
-            log.error "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
-            notification.error "Tailscale" "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
+            log.warn "Postponing backup until tailscale already logged in."
         fi
     fi
 }
