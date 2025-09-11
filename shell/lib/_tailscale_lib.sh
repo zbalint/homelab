@@ -10,6 +10,8 @@ readonly TAILSCALE_CYPHER_DIRECTORY_PATH="/mnt/gocryptfs/cypher/tailscale"
 readonly TAILSCALE_RESTORE_DIRECTORY_PATH="/mnt/gocryptfs/plain/tailscale"
 readonly TAILSCALE_BACKUP_DIRECTORY_PATH="/backup/${CONTAINER_NAME}/tailscale"
 
+readonly TAILSCALE_RUN_FLAG="${TAILSCALE_PLAIN_DIRECTORY_PATH}/.backup_exists"
+
 readonly TAILSCALE_GOCRYPTFS_REVERSE_CONFIG_FILE="${TAILSCALE_PLAIN_DIRECTORY_PATH}/.gocryptfs.reverse.conf"
 readonly TAILSCALE_GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE="/tmp/.gocryptfs.reverse.conf"
 
@@ -17,7 +19,7 @@ function tailscale.status() {
     tailscale status >/dev/null 2>&1
 }
 
-function tailscale.is_first_run() {
+function tailscale.is_restore_required() {
     if common.is_dir_exists "${TAILSCALE_BACKUP_DIRECTORY_PATH}" && ! tailscale.status; then
         return 0
     else
@@ -111,7 +113,7 @@ function tailscale.restore() {
 }
 
 function tailscale.update() {
-    if tailscale.is_first_run; then
+    if tailscale.is_restore_required; then
         log.info "This is the first run. Restoring backup before proceeding."
         if tailscale.stop && tailscale.restore && tailscale.start; then
             log.warn "${MESSAGE_TAILSCALE_RESTORE_SUCCESSFUL}"
@@ -120,11 +122,17 @@ function tailscale.update() {
         fi
     else
         if tailscale.status; then
-            if tailscale.stop && tailscale.backup && tailscale.start; then
-                log.info "${MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL}"
+            if common.is_file_exists "${TAILSCALE_RUN_FLAG}"; then
+                log.debug "Tailscale backup already exists!"
             else
-                log.error "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
-                notification.error "Tailscale" "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
+                log.info "Creating tailscale backup..."
+                if tailscale.stop && tailscale.backup && tailscale.start; then
+                    log.info "${MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL}"
+                    touch "${TAILSCALE_RUN_FLAG}"
+                else
+                    log.error "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
+                    notification.error "Tailscale" "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
+                fi
             fi
         else
             log.warn "Postponing backup until tailscale already logged in."
