@@ -7,9 +7,11 @@ readonly CHECK_ADDRESS_TRAEFIK_PROXY_02="lxc-traefik-02"
 
 readonly FIREWALL_CONFIG_DIRECTORY_PATH="${REPO_DIR}/firewall"
 readonly FIREWALL_CUSTOM_CONFIG_DIRECTORY_PATH="${REPO_DIR}/firewall/${CONTAINER_NAME}"
+readonly FIREWALL_CUSTOM_BASE_CONFIG_DIRECTORY_PATH="${REPO_DIR}/firewall/${CONTAINER_BASE_NAME}"
 readonly FIREWALL_CONFIG_FILE_NAME="nftables.conf"
 readonly FIREWALL_CONFIG_FILE_PATH="${FIREWALL_CONFIG_DIRECTORY_PATH}/${FIREWALL_CONFIG_FILE_NAME}"
 readonly FIREWALL_CUSTOM_CONFIG_FILE_PATH="${FIREWALL_CUSTOM_CONFIG_DIRECTORY_PATH}/${FIREWALL_CONFIG_FILE_NAME}"
+readonly FIREWALL_CUSTOM_BASE_CONFIG_FILE_PATH="${FIREWALL_CUSTOM_BASE_CONFIG_DIRECTORY_PATH}/${FIREWALL_CONFIG_FILE_NAME}"
 
 readonly FIREWALL_CONFIG_PROD_FILE_PATH="/etc/nftables.conf"
 readonly FIREWALL_CONFIG_BACKUP_FILE_PATH="/etc/nftables.conf.bak"
@@ -69,6 +71,9 @@ function firewall.update() {
 
     if common.is_file_exists "${FIREWALL_CUSTOM_CONFIG_FILE_PATH}"; then
         firewall_new_config_path="${FIREWALL_CUSTOM_CONFIG_FILE_PATH}"
+        log.info "Found custom firewall config at ${firewall_new_config_path}"
+    elif common.is_file_exists "${FIREWALL_CUSTOM_BASE_CONFIG_FILE_PATH}"; then
+        firewall_new_config_path="${FIREWALL_CUSTOM_BASE_CONFIG_FILE_PATH}"
         log.info "Found custom firewall config at ${firewall_new_config_path}"
     else
         firewall_new_config_path="${FIREWALL_CONFIG_FILE_PATH}"
