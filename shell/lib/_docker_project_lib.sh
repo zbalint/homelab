@@ -40,12 +40,12 @@ function docker.project.reload() {
 function docker.project.backup() {
     if gocryptfs.init_reverse_volume "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"; then
         if ! common.is_dir_exists "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}" && common.create_directory "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"; then
-            log.info "Creating directory for gocryptfs cipher volume at ${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
+            log.debug "Creating directory for gocryptfs cipher volume at ${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
         fi
 
         if gocryptfs.mount_reverse_volume "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}" "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"; then
             if ! common.is_dir_exists "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}" && common.create_directory "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"; then
-                log.info "Creating backup directory at ${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"
+                log.debug "Creating backup directory at ${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"
             fi
             if common.copy_directory "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}" "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"; then
                 log.info "Docker project backup was successful."
@@ -68,22 +68,22 @@ function docker.project.restore() {
 
 function docker.project.check() {
     if ! common.is_dir_exists "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" && common.create_directory "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}"; then
-        log.info "Creating temp directory at ${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
+        log.debug "Creating temp directory at ${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
     fi
 
     if common.is_dir_exists "${DOCKER_PROJECT_CUSTOM_BASE_DIRECTORY_PATH}" && common.copy_directory "${DOCKER_PROJECT_CUSTOM_BASE_DIRECTORY_PATH}" "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}"; then
-        log.info "Copying ${DOCKER_PROJECT_CUSTOM_BASE_DIRECTORY_PATH} content to ${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}."
+        log.debug "Copying ${DOCKER_PROJECT_CUSTOM_BASE_DIRECTORY_PATH} content to ${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}."
     fi
     
     if common.is_dir_exists "${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH}" && common.copy_directory "${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH}" "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}"; then
-        log.info "Copying ${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH} content to ${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}."
+        log.debug "Copying ${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH} content to ${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}."
     fi
 
     if common.compare_directories "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"; then
-        log.info "No new changes found in the docker project."
+        log.info "${MESSAGE_DOCKER_PROJECT_UNCHANGED}"
         return 1
     else
-        log.info "Changes found in the docker project."
+        log.info "${MESSAGE_DOCKER_PROJECT_CHANGE_DETECTED}"
         return 0
     fi
     
