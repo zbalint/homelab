@@ -38,6 +38,8 @@ function gocryptfs._is_dir_mounted() {
 function gocryptfs.init_normal_volume() {
     local cipher_directory="$1"
 
+    gocryptfs._load_secret
+
     if test -f "${cipher_directory}/.gocryptfs.conf"; then
         # log.into "Gocryptfs normal volume found at ${cipher_directory}"
         log.debug "Gocryptfs normal volume found at ${cipher_directory}"
@@ -57,6 +59,8 @@ function gocryptfs.init_normal_volume() {
 
 function gocryptfs.init_reverse_volume() {
     local plain_directory="$1"
+
+    gocryptfs._load_secret
 
     if test -f "${plain_directory}/.gocryptfs.reverse.conf"; then
         # log.info "Gocryptfs reverse volume found at ${plain_directory}"
@@ -78,6 +82,8 @@ function gocryptfs.init_reverse_volume() {
 function gocryptfs.mount_normal_volume() {
     local plain_directory="$1"
     local chiper_directory="$2"
+
+    gocryptfs._load_secret
 
     if gocryptfs._is_dir_mounted "${plain_directory}"; then
         # log.warn "Gocrypfs plain directory already mounted at ${plain_directory}"
@@ -101,6 +107,8 @@ function gocryptfs.mount_normal_volume() {
 function gocryptfs.mount_reverse_volume() {
     local plain_directory="$1"
     local chiper_directory="$2"
+
+    gocryptfs._load_secret
 
     if gocryptfs._is_dir_mounted "${chiper_directory}"; then
         # log.warn "Gocrypfs cipher directory already mounted at ${chiper_directory}"
@@ -140,5 +148,3 @@ function gocryptfs.unmount() {
         return 0
     fi
 }
-
-gocryptfs._load_secret
