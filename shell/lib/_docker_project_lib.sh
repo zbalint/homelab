@@ -91,6 +91,7 @@ function docker.project.check() {
 
 function docker.project.update() {
     docker.project.backup
+    docker.project.check
     return 0
 }
 
