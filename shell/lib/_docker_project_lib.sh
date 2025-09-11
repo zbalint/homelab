@@ -163,13 +163,17 @@ function docker.project.update() {
             log.info "${MESSAGE_DOCKER_PROJECT_BACKUP_SUCCESSFUL}"
             if docker.project.copy && docker.project.reload && docker.project.check; then
                 log.info "${MESSAGE_DOCKER_PROJECT_UPDATE_SUCCESSFUL}"
+                notification.info "Docker project" "${MESSAGE_DOCKER_PROJECT_UPDATE_SUCCESSFUL}"
             elif docker.project.restore && docker.project.reload && docker.project.check; then
                 log.warn "${MESSAGE_DOCKER_PROJECT_UPDATE_FAILED}"
+                notification.warn "Docker project" "${MESSAGE_DOCKER_PROJECT_UPDATE_FAILED}"
             else
                 log.error "${MESSAGE_DOCKER_PROJECT_RESTORE_FAILED}"
+                notification.error "Docker project" "${MESSAGE_DOCKER_PROJECT_RESTORE_FAILED}"
             fi
         else
-            log.error "${MESSAGE_DOCKER_PROJECT_BACKUP_FAILED}"  
+            log.error "${MESSAGE_DOCKER_PROJECT_BACKUP_FAILED}"
+            notification.error "Docker project" "${MESSAGE_DOCKER_PROJECT_BACKUP_FAILED}"
         fi
     fi
     
