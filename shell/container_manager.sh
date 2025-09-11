@@ -34,6 +34,8 @@ source "${SCRIPT_LIB_DIR}/_firewall_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_gocryptfs_lib.sh"
 # shellcheck disable=SC1090
+source "${SCRIPT_LIB_DIR}/_docker_lib.sh"
+# shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_docker_daemon_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_docker_project_lib.sh"
@@ -43,6 +45,7 @@ source "${SCRIPT_LIB_DIR}/_docker_project_lib.sh"
 function main() {
     firewall.update
     docker.daemon.update
+    docker.project.update
     return 0
 }
 

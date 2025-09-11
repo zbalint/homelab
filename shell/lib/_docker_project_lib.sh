@@ -14,6 +14,7 @@ readonly MESSAGE_DOCKER_PROJECT_RESTORE_FAILED="Failed to restore docker project
 readonly MESSAGE_DOCKER_PROJECT_BACKUP_SUCCESSFUL="Docker project backup was successful!"
 readonly MESSAGE_DOCKER_PROJECT_BACKUP_FAILED="Failed to backup docker project!"
 
+readonly DOCKER_PROJECT_TEMP_DIRECTORY_PATH="/tmp/${DOCKER_PROJECT_NAME}"
 readonly DOCKER_PROJECT_PROD_DIRECTORY_PATH="/opt/docker/stacks/${DOCKER_PROJECT_NAME}"
 readonly DOCKER_PROJECT_PLAIN_DIRECTORY_PATH="/opt/docker"
 readonly DOCKER_PROJECT_CYPHER_DIRECTORY_PATH="/mnt/cypher"
@@ -38,7 +39,13 @@ function docker.project.reload() {
 
 function docker.project.backup() {
     if gocryptfs.init_reverse_volume "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"; then
-        echo "TODO"
+        if gocryptfs.mount_reverse_volume "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}" "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"; then
+            common.create_directory "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"
+            common.copy_directory "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}" "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"
+            gocrypfs.unmount "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
+        else
+            log.error "Failed to mount reverse gocryptfs volume at ${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"
+        fi
     else
         log.error "Failed to initialize reverse gocryptfs volume at ${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"
     fi
@@ -54,6 +61,7 @@ function docker.project.check() {
 }
 
 function docker.project.update() {
+    docker.project.backup
     return 0
 }
 

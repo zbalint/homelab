@@ -75,9 +75,17 @@ function gocryptfs.mount_normal_volume() {
 
     if gocryptfs._is_dir_mounted "${plain_directory}"; then
         log.warn "Gocrypfs plain directory already mounted at ${plain_directory}"
+        return 0
     else
         echo "${GOCRYPTFS_SECRET}" | gocryptfs "${chiper_directory}" "${plain_directory}"
-        log.info "Gocrypfs cipher directory ${chiper_directory} mounted as plain directory at ${plain_directory}"
+        # shellcheck disable=SC2181
+        if (( $? == 0 )); then
+            log.info "Gocrypfs cipher directory ${chiper_directory} mounted as plain directory at ${plain_directory}"
+            return 0
+        else
+            log.error "Failed to mount gocrypfs cipher directory ${chiper_directory} as plain directory at ${plain_directory}"
+            return 1
+        fi
     fi
 }
 
@@ -87,9 +95,17 @@ function gocryptfs.mount_reverse_volume() {
 
     if gocryptfs._is_dir_mounted "${chiper_directory}"; then
         log.warn "Gocrypfs cipher directory already mounted at ${chiper_directory}"
+        return 0
     else
         echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${plain_directory}" "${chiper_directory}"
-        log.info "Gocrypfs plain directory ${plain_directory} mounted as cipher directory at ${chiper_directory}"
+        # shellcheck disable=SC2181
+        if (( $? == 0 )); then
+            log.info "Gocrypfs plain directory ${plain_directory} mounted as cipher directory at ${chiper_directory}"
+            return 0
+        else
+            log.error "Failed to mount gocrypfs plain directory ${plain_directory} as cipher directory at ${chiper_directory}"
+            return 1
+        fi
     fi
 }
 
