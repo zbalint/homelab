@@ -27,7 +27,7 @@ readonly GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE="/tmp/.gocryptfs.reverse.conf"
 
 function docker.project.stop() {
     cd "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}" >/dev/null 2>&1 && \
-    docker compose down >/dev/null 2>& && \
+    docker compose down >/dev/null 2>&1 && \
     sleep 5
 }
 
