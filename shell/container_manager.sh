@@ -1,10 +1,12 @@
 #!/bin/bash
 
 readonly CONTAINER_NAME="$(hostname)"
+readonly PROJECT_NAME="${CONTAINER_NAME}"
+readonly PROJECT_BASE_NAME="${PROJECT_NAME%-0*}"
+
 readonly INSTALL_DIR="/root/homelab"
 readonly LOG_DIR="${INSTALL_DIR}/log"
 readonly TEMP_DIR="${INSTALL_DIR}/temp"
-# readonly REPO_DIR="."
 readonly REPO_DIR="${INSTALL_DIR}/repo"
 readonly SECRET_DIR="${REPO_DIR}/secret"
 readonly SCRIPT_DIR="${REPO_DIR}/shell"
@@ -33,8 +35,6 @@ source "${SCRIPT_LIB_DIR}/_notification_lib.sh"
 source "${SCRIPT_LIB_DIR}/_firewall_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_gocryptfs_lib.sh"
-# shellcheck disable=SC1090
-source "${SCRIPT_LIB_DIR}/_docker_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_docker_daemon_lib.sh"
 # shellcheck disable=SC1090
