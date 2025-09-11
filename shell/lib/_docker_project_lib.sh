@@ -15,7 +15,7 @@ readonly MESSAGE_DOCKER_PROJECT_RESTORE_FAILED="Failed to restore docker project
 readonly MESSAGE_DOCKER_PROJECT_BACKUP_SUCCESSFUL="Docker project backup was successful!"
 readonly MESSAGE_DOCKER_PROJECT_BACKUP_FAILED="Failed to backup docker project!"
 
-readonly DOCKER_PROJECT_TEMP_DIRECTORY_PATH="/tmp/${DOCKER_PROJECT_NAME}"
+readonly DOCKER_PROJECT_TEMP_DIRECTORY_PATH="${TEMP_DIR}/${DOCKER_PROJECT_NAME}"
 readonly DOCKER_PROJECT_PROD_DIRECTORY_PATH="/opt/docker/stacks/${DOCKER_PROJECT_NAME}"
 readonly DOCKER_PROJECT_PLAIN_DIRECTORY_PATH="/opt/docker"
 readonly DOCKER_PROJECT_CYPHER_DIRECTORY_PATH="/mnt/gocryptfs/cypher/docker"
@@ -25,6 +25,7 @@ readonly DOCKER_PROJECT_BACKUP_DIRECTORY_PATH="/backup/${CONTAINER_NAME}/docker"
 readonly GOCRYPTFS_REVERSE_CONFIG_FILE="${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}/.gocryptfs.reverse.conf"
 readonly GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE="/tmp/.gocryptfs.reverse.conf"
 
+readonly DOCKER_USER="tartarus"
 
 function docker.project.stop() {
     log.debug "Stopping docker project... (delay 5sec)"
@@ -124,6 +125,8 @@ function docker.project.compare() {
     if common.is_dir_exists "${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH}" && common.copy_directory "${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH}" "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}"; then
         log.debug "Copying ${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH} content to ${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}."
     fi
+
+    chown -R ${DOCKER_USER}:${DOCKER_USER} "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}"
 
     common.compare_directories "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"
 }
