@@ -79,6 +79,7 @@ function docker.project.check() {
         log.info "Copying ${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH} content to ${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}."
     fi
 
+    echo common.compare_directories "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"
     if common.compare_directories "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"; then
         log.info "same"
     else
