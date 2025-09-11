@@ -13,6 +13,9 @@ function gocryptfs._load_secret() {
         
         GOCRYPTFS_SECRET="${password}"
     else
+        if ! common.is_dir_exists "${LOCAL_SECRET_DIR}"; then
+            common.create_directory "${LOCAL_SECRET_DIR}"
+        fi
 
         password="$(random.get_string ${GOCRYPTFS_PASSWORD_LENGTH})"
         encrypted_password="$(encryption.encrypt_string "${password}")"

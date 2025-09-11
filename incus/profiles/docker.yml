@@ -25,7 +25,7 @@ config:
   limits.processes: '500'
   security.nesting: 'true'
   security.idmap.size: '655360'
-  security.idmap.isolated: 'true'
+  security.idmap.isolated: 'false'
   boot.autostart: 'true'
   cloud-init.user-data: |-
     #cloud-config
