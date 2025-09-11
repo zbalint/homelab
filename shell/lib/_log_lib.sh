@@ -66,7 +66,7 @@ function log._log() {
         echo "${level}: ${message}"
     fi
 
-    log_.log_to_file "${level}: ${message}"
+    log_.log_to_file "[$(date +"%Y-%m-%d %X")][${level}]: ${message}"
 }
 
 function log.debug() {
