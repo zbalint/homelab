@@ -21,6 +21,9 @@ readonly DOCKER_PROJECT_CYPHER_DIRECTORY_PATH="/mnt/gocryptfs/cypher/docker"
 readonly DOCKER_PROJECT_RESTORE_DIRECTORY_PATH="/mnt/gocryptfs/plain/docker"
 readonly DOCKER_PROJECT_BACKUP_DIRECTORY_PATH="/backup/${CONTAINER_NAME}/docker"
 
+readonly GOCRYPTFS_REVERSE_CONFIG_FILE="${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}/.gocryptfs.reverse.conf"
+readonly GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE="/tmp/.gocryptfs.reverse.conf"
+
 
 function docker.project.stop() {
     cd "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}" >/dev/null 2>&1 && \
@@ -81,7 +84,14 @@ function docker.project.restore() {
             log.debug "Creating project directory at ${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"
         fi
         
+        if common.is_file_exists "${GOCRYPTFS_REVERSE_CONFIG_FILE}"; then
+            common.copy_file "${GOCRYPTFS_REVERSE_CONFIG_FILE}" "${GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE}"
+        fi
+
         if common.copy_directory "${DOCKER_PROJECT_RESTORE_DIRECTORY_PATH}" "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"; then
+            if common.is_file_exists "${GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE}"; then
+                common.copy_file "${GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE}" "${GOCRYPTFS_REVERSE_CONFIG_FILE}"
+            fi
             gocryptfs.unmount "${DOCKER_PROJECT_RESTORE_DIRECTORY_PATH}"
             return 0
         else
