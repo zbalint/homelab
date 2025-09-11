@@ -29,7 +29,6 @@ services:
     tmpfs:
       - /run
       - /var/cache/nginx
-    x
     # volumes:
     #   - /tmp/test/default.conf:/etc/nginx/conf.d/default.conf:ro
     #   - /tmp/test/html:/usr/share/nginx/html:ro
