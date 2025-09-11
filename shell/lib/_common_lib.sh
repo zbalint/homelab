@@ -37,6 +37,16 @@ function common.is_file_exists() {
     test -f "${file}"
 }
 
+function common.is_dir_mounted() {
+    local directory="$1"
+
+    if mountpoint -q "${directory}"; then
+        return 0
+    fi
+
+    return 1
+}
+
 function common.is_dir_exists() {
     local dir="$1"
 
