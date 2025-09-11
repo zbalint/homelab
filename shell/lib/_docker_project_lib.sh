@@ -154,7 +154,7 @@ function docker.project.copy() {
     common.copy_directory "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"
 }
 
-function docker.project.first_run_check() {
+function docker.project.is_first_run() {
     if ! common.is_file_exists "${GOCRYPTFS_SECRET_FILE_PATH}" && common.is_dir_exists "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"; then
         return 0
     else
@@ -162,8 +162,16 @@ function docker.project.first_run_check() {
     fi
 }
 
+function docker.project.is_first_update() {
+    if common.is_file_exists "${GOCRYPTFS_SECRET_FILE_PATH}" && common.is_dir_exists "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}" && ! common.is_dir_exists "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 function docker.project.update() {
-    if docker.project.first_run_check; then
+    if docker.project.is_first_run; then
         log.warn "Docker project" "Gocryptfs secret ${GOCRYPTFS_SECRET_FILE_PATH} is missing but backup exists at ${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}. Skipping update until secret is provided or backup is deleted."
         notification.warn "Docker project" "Gocryptfs secret ${GOCRYPTFS_SECRET_FILE_PATH} is missing but backup exists at ${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}. Skipping update until secret is provided or backup is deleted."
         return 1
@@ -173,6 +181,16 @@ function docker.project.update() {
         log.info "${MESSAGE_DOCKER_PROJECT_UNCHANGED}"
     else
         log.info "${MESSAGE_DOCKER_PROJECT_CHANGE_DETECTED}"
+        if docker.project.is_first_update; then
+            log.info "This is the first update. Restoring backup before proceeding."
+            if docker.project.restore && docker.project.reload && docker.project.check; then
+                log.warn "${MESSAGE_DOCKER_PROJECT_UPDATE_FAILED}"
+                notification.warn "Docker project" "${MESSAGE_DOCKER_PROJECT_UPDATE_FAILED}"
+            else
+                log.error "${MESSAGE_DOCKER_PROJECT_RESTORE_FAILED}"
+                notification.error "Docker project" "${MESSAGE_DOCKER_PROJECT_RESTORE_FAILED}"
+            fi
+        fi
         if docker.project.backup; then
             log.info "${MESSAGE_DOCKER_PROJECT_BACKUP_SUCCESSFUL}"
             if docker.project.copy && docker.project.reload && docker.project.check; then
