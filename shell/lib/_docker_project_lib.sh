@@ -79,11 +79,12 @@ function docker.project.check() {
         log.info "Copying ${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH} content to ${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}."
     fi
 
-    echo common.compare_directories "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"
     if common.compare_directories "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"; then
-        log.info "same"
+        log.info "No new changes found in the docker project."
+        return 1
     else
-        log.info "not same"
+        log.info "Changes found in the docker project."
+        return 0
     fi
     
 
@@ -91,8 +92,10 @@ function docker.project.check() {
 }
 
 function docker.project.update() {
-    docker.project.backup
-    docker.project.check
+    if docker.project.check; then
+        docker.project.backup
+    fi
+    
     return 0
 }
 
