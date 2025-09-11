@@ -27,14 +27,16 @@ readonly GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE="/tmp/.gocryptfs.reverse.conf"
 
 function docker.project.stop() {
     cd "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}" >/dev/null 2>&1 && \
-    docker compose down >/dev/null 2>&1
+    docker compose down >/dev/null 2>& && \
+    sleep 5
 }
 
 function docker.project.start() {
     cd "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}" >/dev/null 2>&1 && \
     docker compose pull >/dev/null 2>&1 && \
     docker compose up -d >/dev/null 2>&1 && \
-    yes | docker system prune --all >/dev/null 2>&1
+    yes | docker system prune --all >/dev/null 2>&1 && \
+    sleep 5
 }
 
 function docker.project.reload() {
@@ -142,16 +144,24 @@ function docker.project.check() {
     return ${status}
 }
 
-function docker.project.update() {
-    docker.project.restore
-    return 0
+function docker.project.copy() {
+    common.copy_directory "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"
+}
 
+function docker.project.update() {
     if docker.project.compare; then
         log.info "${MESSAGE_DOCKER_PROJECT_UNCHANGED}"
     else
         log.info "${MESSAGE_DOCKER_PROJECT_CHANGE_DETECTED}"
         if docker.project.backup; then
             log.info "${MESSAGE_DOCKER_PROJECT_BACKUP_SUCCESSFUL}"
+            if docker.project.copy && docker.project.reload && docker.project.check; then
+                log.info "${MESSAGE_DOCKER_PROJECT_UPDATE_SUCCESSFUL}"
+            elif docker.project.restore && docker.project.reload && docker.project.check; then
+                log.warn "${MESSAGE_DOCKER_PROJECT_UPDATE_FAILED}"
+            else
+                log.error "${MESSAGE_DOCKER_PROJECT_RESTORE_FAILED}"
+            fi
         else
             log.error "${MESSAGE_DOCKER_PROJECT_BACKUP_FAILED}"  
         fi
