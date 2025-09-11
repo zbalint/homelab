@@ -40,8 +40,6 @@ source "${SCRIPT_LIB_DIR}/_docker_daemon_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_docker_project_lib.sh"
 
-
-
 function main() {
     firewall.update
     docker.daemon.update
