@@ -152,7 +152,7 @@ function docker.project.check() {
 
 function docker.project.copy() {
     log.debug "Copying ${DOCKER_PROJECT_TEMP_DIRECTORY_PATH} content to ${DOCKER_PROJECT_PROD_DIRECTORY_PATH}."
-    common.copy_directory "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"
+    common.replace_directory "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"
 }
 
 function docker.project.is_first_run() {
