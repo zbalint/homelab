@@ -172,6 +172,15 @@ function docker.project.is_first_update() {
 }
 
 function docker.project.update() {
+    if common.is_file_exists "${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH}/docker-compose.yaml"; then
+        log.info "Found docker project at ${DOCKER_PROJECT_CUSTOM_DIRECTORY_PATH}"
+    elif common.is_file_exists "${DOCKER_PROJECT_CUSTOM_BASE_DIRECTORY_PATH}/docker-compose.yaml"; then
+        log.info "Found docker project at ${DOCKER_PROJECT_CUSTOM_BASE_DIRECTORY_PATH}"
+    else
+        log.info "No docker project found."
+        return 1
+    fi
+
     if docker.project.is_first_run; then
         log.warn "Docker project" "Gocryptfs secret ${GOCRYPTFS_SECRET_FILE_PATH} is missing but backup exists at ${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}. Skipping update until secret is provided or backup is deleted."
         notification.warn "Docker project" "Gocryptfs secret ${GOCRYPTFS_SECRET_FILE_PATH} is missing but backup exists at ${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}. Skipping update until secret is provided or backup is deleted."
