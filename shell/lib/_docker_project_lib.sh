@@ -17,7 +17,7 @@ readonly MESSAGE_DOCKER_PROJECT_BACKUP_FAILED="Failed to backup docker project!"
 readonly DOCKER_PROJECT_TEMP_DIRECTORY_PATH="/tmp/${DOCKER_PROJECT_NAME}"
 readonly DOCKER_PROJECT_PROD_DIRECTORY_PATH="/opt/docker/stacks/${DOCKER_PROJECT_NAME}"
 readonly DOCKER_PROJECT_PLAIN_DIRECTORY_PATH="/opt/docker"
-readonly DOCKER_PROJECT_CYPHER_DIRECTORY_PATH="/mnt/cypher"
+readonly DOCKER_PROJECT_CYPHER_DIRECTORY_PATH="/mnt/gocryptfs/cypher/docker"
 readonly DOCKER_PROJECT_BACKUP_DIRECTORY_PATH="/backup/${CONTAINER_NAME}/docker"
 
 
@@ -39,9 +39,19 @@ function docker.project.reload() {
 
 function docker.project.backup() {
     if gocryptfs.init_reverse_volume "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"; then
-        if common.create_directory "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}" && gocryptfs.mount_reverse_volume "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}" "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"; then
-            common.create_directory "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"
-            common.copy_directory "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}" "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"
+        if ! common.is_dir_exists "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}" && common.create_directory "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"; then
+            log.info "Creating directory for gocryptfs cipher volume at ${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
+        fi
+
+        if gocryptfs.mount_reverse_volume "${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}" "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"; then
+            if ! common.is_dir_exists "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}" && common.create_directory "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"; then
+                log.info "Creating backup directory at ${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"
+            fi
+            if common.copy_directory "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}" "${DOCKER_PROJECT_BACKUP_DIRECTORY_PATH}"; then
+                log.info "Docker project backup was successful."
+            else
+                log.error "Docker project backup failed!"
+            fi
             gocryptfs.unmount "${DOCKER_PROJECT_CYPHER_DIRECTORY_PATH}"
         else
             log.error "Failed to mount reverse gocryptfs volume at ${DOCKER_PROJECT_PLAIN_DIRECTORY_PATH}"
