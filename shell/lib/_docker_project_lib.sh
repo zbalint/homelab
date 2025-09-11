@@ -10,6 +10,7 @@ readonly MESSAGE_DOCKER_PROJECT_UNCHANGED="No changes detected in the docker pro
 readonly MESSAGE_DOCKER_PROJECT_CHANGE_DETECTED="Changes detected in the docker project."
 readonly MESSAGE_DOCKER_PROJECT_UPDATE_SUCCESSFUL="Docker project successfully updated!"
 readonly MESSAGE_DOCKER_PROJECT_UPDATE_FAILED="Failed to update docker project, but sucessfully restored!"
+readonly MESSAGE_DOCKER_PROJECT_RESTORE_SUCCESSFUL="Docker project successfully restored!"
 readonly MESSAGE_DOCKER_PROJECT_RESTORE_FAILED="Failed to restore docker project!"
 readonly MESSAGE_DOCKER_PROJECT_BACKUP_SUCCESSFUL="Docker project backup was successful!"
 readonly MESSAGE_DOCKER_PROJECT_BACKUP_FAILED="Failed to backup docker project!"
@@ -183,12 +184,10 @@ function docker.project.update() {
         log.info "${MESSAGE_DOCKER_PROJECT_CHANGE_DETECTED}"
         if docker.project.is_first_update; then
             log.info "This is the first update. Restoring backup before proceeding."
-            if docker.project.restore && docker.project.reload && docker.project.check; then
-                log.warn "${MESSAGE_DOCKER_PROJECT_UPDATE_FAILED}"
-                notification.warn "Docker project" "${MESSAGE_DOCKER_PROJECT_UPDATE_FAILED}"
+            if docker.project.restore; then
+                log.warn "${MESSAGE_DOCKER_PROJECT_RESTORE_SUCCESSFUL}"
             else
                 log.error "${MESSAGE_DOCKER_PROJECT_RESTORE_FAILED}"
-                notification.error "Docker project" "${MESSAGE_DOCKER_PROJECT_RESTORE_FAILED}"
             fi
         fi
         if docker.project.backup; then
