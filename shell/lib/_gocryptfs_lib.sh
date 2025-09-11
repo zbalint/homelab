@@ -115,7 +115,7 @@ function gocryptfs.mount_reverse_volume() {
         log.debug "Gocrypfs cipher directory already mounted at ${chiper_directory}"
         return 0
     else
-        echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${plain_directory}" "${chiper_directory}" >/dev/null 2>&1
+        echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${plain_directory}" "${chiper_directory}" #>/dev/null 2>&1
         # shellcheck disable=SC2181
         if (( $? == 0 )); then
             # log.info "Gocrypfs plain directory ${plain_directory} mounted as cipher directory at ${chiper_directory}"
