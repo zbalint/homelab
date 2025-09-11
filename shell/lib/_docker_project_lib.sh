@@ -143,8 +143,8 @@ function docker.project.check() {
 }
 
 function docker.project.update() {
-    # docker.project.restore
-    # return 0
+    docker.project.restore
+    return 0
 
     if docker.project.compare; then
         log.info "${MESSAGE_DOCKER_PROJECT_UNCHANGED}"
