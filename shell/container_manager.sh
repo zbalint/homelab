@@ -41,6 +41,8 @@ source "${SCRIPT_LIB_DIR}/_gocryptfs_lib.sh"
 source "${SCRIPT_LIB_DIR}/_docker_daemon_lib.sh"
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_docker_project_lib.sh"
+# shellcheck disable=SC1090
+source "${SCRIPT_LIB_DIR}/_tailscale_lib.sh"
 
 function init() {
     if ! common.is_file_exists "${GOCRYPTFS_SECRET_FILE_PATH}" && common.is_dir_exists "${GLOBAL_BACKUP_DIR}/${CONTAINER_NAME}"; then
@@ -54,6 +56,7 @@ function init() {
 
 function main() {
     firewall.update
+    tailscale.update
     docker.daemon.update
     docker.project.update
     return 0
