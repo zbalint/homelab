@@ -123,7 +123,7 @@ function tailscale.update() {
             log.info "${MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL}"
         else
             log.error "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
-            notification.error "Docker project" "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
+            notification.error "Tailscale" "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
         fi
     fi
 }
