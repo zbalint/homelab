@@ -43,7 +43,7 @@ function gocryptfs.init_normal_volume() {
         return 0
     fi
 
-    if echo "${GOCRYPTFS_SECRET}" | gocryptfs -init "${cipher_directory}"; then
+    if echo "${GOCRYPTFS_SECRET}" | gocryptfs -init "${cipher_directory}" >/dev/null 2>&1; then
         log.info "Gocryptfs normal volume initialized at ${cipher_directory}"
         return 0
     else
@@ -60,7 +60,7 @@ function gocryptfs.init_reverse_volume() {
         return 0
     fi
 
-    if echo "${GOCRYPTFS_SECRET}" | gocryptfs -init -reverse "${plain_directory}"; then
+    if echo "${GOCRYPTFS_SECRET}" | gocryptfs -init -reverse "${plain_directory}" >/dev/null 2>&1; then
         log.info "Gocryptfs reverse volume initialized at ${plain_directory}"
         return 0
     else
@@ -77,7 +77,7 @@ function gocryptfs.mount_normal_volume() {
         log.warn "Gocrypfs plain directory already mounted at ${plain_directory}"
         return 0
     else
-        echo "${GOCRYPTFS_SECRET}" | gocryptfs "${chiper_directory}" "${plain_directory}"
+        echo "${GOCRYPTFS_SECRET}" | gocryptfs "${chiper_directory}" "${plain_directory}" >/dev/null 2>&1
         # shellcheck disable=SC2181
         if (( $? == 0 )); then
             log.info "Gocrypfs cipher directory ${chiper_directory} mounted as plain directory at ${plain_directory}"
@@ -97,7 +97,7 @@ function gocryptfs.mount_reverse_volume() {
         log.warn "Gocrypfs cipher directory already mounted at ${chiper_directory}"
         return 0
     else
-        echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${plain_directory}" "${chiper_directory}"
+        echo "${GOCRYPTFS_SECRET}" | gocryptfs -reverse "${plain_directory}" "${chiper_directory}" >/dev/null 2>&1
         # shellcheck disable=SC2181
         if (( $? == 0 )); then
             log.info "Gocrypfs plain directory ${plain_directory} mounted as cipher directory at ${chiper_directory}"
@@ -113,7 +113,7 @@ function gocryptfs.unmount() {
     local volume="$1"
 
     if common.is_dir_mounted "${volume}"; then
-        if umount "${volume}"; then
+        if umount "${volume}" >/dev/null 2>&1; then
             log.info "Gocrypfs directory unmounted at ${volume}"
             return 0
         else
