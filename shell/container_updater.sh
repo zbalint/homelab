@@ -1,6 +1,9 @@
 #!/bin/bash
 
 readonly HOMELAB_GIT_REPOSITORY_URL="https://github.com/zbalint/homelab.git"
+readonly GOCRYPTFS_VERSION="2.6.1"
+readonly GOCRYPTFS_ARCHIVE_URL="https://github.com/rfjakob/gocryptfs/releases/download/v${GOCRYPTFS_VERSION}/gocryptfs_v${GOCRYPTFS_VERSION}_linux-static_amd64.tar.gz"
+
 readonly INSTALL_DIR="/root/homelab"
 readonly REPO_DIR="${INSTALL_DIR}/repo"
 readonly SECRET_DIR="${REPO_DIR}/secret"
@@ -57,6 +60,34 @@ function git_pull() {
     cd "${repository_dir}" && git fetch --quiet && git reset --quiet --hard origin/master
 }
 
+function install_gocryptfs() {
+    if ! gocryptfs -version >/dev/null 2>&1; then
+        local archive_path="/tmp/gocryptfs.tar.gz"
+        local extract_path="/tmp/gocryptfs"
+        if wget -q "${GOCRYPTFS_ARCHIVE_URL}" -O "${archive_path}" && is_file_exists "${archive_path}"; then
+            mkdir "${extract_path}" >/dev/null 2>&1 && \
+            tar -xvf "${archive_path}" -C "${extract_path}" >/dev/null 2>&1 && \
+            mv "${extract_path}/gocryptfs" /usr/bin/gocryptfs >/dev/null 2>&1 && \
+            mv "${extract_path}/gocryptfs-xray" /usr/bin/gocryptfs-xray >/dev/null 2>&1 && \
+            chmod 700 /usr/bin/gocryptfs >/dev/null 2>&1 && \
+            chmod 700 /usr/bin/gocryptfs-xray >/dev/null 2>&1 && \
+            rm -rf "${extract_path}"
+
+            if gocryptfs -version >/dev/null 2>&1; then
+                echo "INFO: Gocryptfs successfully installed."
+                return 0
+            else
+                echo "FATAL: Could not install gocryptfs"
+                return 1
+            fi
+            
+        else
+            echo "ERROR: Could not download gocryptfs!"
+            return 1
+        fi
+    fi
+}
+
 function init_homelab_directory() {
     local directory="$1"
 
@@ -100,6 +131,7 @@ function decrypt_secrets() {
 }
 
 function main() {
+    install_gocryptfs
     init_homelab_directories
     update_homelab_repo
     decrypt_secrets
