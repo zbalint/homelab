@@ -38,7 +38,7 @@ function tailscale.is_restore_required() {
     fi
 }
 
-function tailsacle.is_first_run() {
+function tailscale.is_first_run() {
     if ! common.is_dir_exists "${TAILSCALE_BACKUP_DIRECTORY_PATH}" && ! tailscale.status; then
         return 0
     else
