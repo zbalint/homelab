@@ -30,18 +30,18 @@ readonly DOCKER_USER="tartarus"
 function docker.project.stop() {
     log.debug "Stopping docker project... (delay 5sec)"
 
-    cd "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}" >"${LOG_FILE}" 2>&1 && \
-    docker compose down >"${LOG_FILE}" 2>&1 && \
+    cd "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}" >>"${LOG_FILE}" 2>&1 && \
+    docker compose down >>"${LOG_FILE}" 2>&1 && \
     sleep 5
 }
 
 function docker.project.start() {
     log.debug "Starting docker project... (delay 5sec)"
 
-    cd "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}" >"${LOG_FILE}" 2>&1 && \
-    docker compose pull >"${LOG_FILE}" 2>&1 && \
-    docker compose up -d >"${LOG_FILE}" 2>&1 && \
-    yes | docker system prune --all >"${LOG_FILE}" 2>&1 && \
+    cd "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}" >>"${LOG_FILE}" 2>&1 && \
+    docker compose pull >>"${LOG_FILE}" 2>&1 && \
+    docker compose up -d >>"${LOG_FILE}" 2>&1 && \
+    yes | docker system prune --all >>"${LOG_FILE}" 2>&1 && \
     sleep 5
 }
 
@@ -140,7 +140,7 @@ function docker.project.check() {
     grep "container_name" "${docker_project_file_path}" | awk '{print $2}' > "${temp_file}"
     
     while IFS= read -r container; do
-        if docker ps | grep "${container}" >"${LOG_FILE}" 2>&1; then
+        if docker ps | grep "${container}" >>"${LOG_FILE}" 2>&1; then
             log.debug "Container ${container} is running."
         else
             log.debug "Container ${container} is not running!"
