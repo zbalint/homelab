@@ -93,7 +93,7 @@ function tailscale.login() {
     tailscale_api_key="$(common.read_file "${TAILSCALE_SECRET_FILE}")"
 
     # shellcheck disable=SC2086
-    tailscale up --reset ${tailscale_params} --auth-key=${tailscale_api_key} >>"${LOG_FILE}" 2>&1 &&
+    tailscale up --reset ${tailscale_params} --auth-key=${tailscale_api_key} >>"${LOG_FILE}" 2>&1
 }
 
 function tailscale.stop() {
