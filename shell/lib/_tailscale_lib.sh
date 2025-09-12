@@ -106,6 +106,7 @@ function tailscale.login() {
 
     if ! tailscale.validate_hostname; then
         log.warn "Tailscale hostname is not the same as the container hostname!"
+        tailscale set --hostname="${PROJECT_BASE_NAME}-temp" && \
         tailscale set --hostname="${CONTAINER_NAME}"
     fi
 }
