@@ -1,1 +1,1 @@
---accept-dns=true --ssh=falseasdasd ads
+--accept-dns=true --ssh=true
