@@ -61,7 +61,9 @@ function git_pull() {
 }
 
 function install_gocryptfs() {
-    if ! gocryptfs -version >/dev/null 2>&1; then
+    if gocryptfs -version >/dev/null 2>&1; then
+        echo "INFO: Gocryptfs installed."
+    else
         local archive_path="/tmp/gocryptfs.tar.gz"
         local extract_path="/tmp/gocryptfs"
         if wget -q "${GOCRYPTFS_ARCHIVE_URL}" -O "${archive_path}" && is_file_exists "${archive_path}"; then
