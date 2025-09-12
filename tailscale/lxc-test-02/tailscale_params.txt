@@ -1,1 +1,1 @@
---accept-dns=true --ssh
+--accept-dns=true --ssh=false
