@@ -27,6 +27,7 @@ mkdir -p "${LOG_DIR}"
 mkdir -p "${TEMP_DIR}"
 mkdir -p "${REPO_DIR}"
 mkdir -p "${CONFIG_DIR}"
+mkdir -p "${LOCAL_SECRET_DIR}"
 
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_log_lib.sh"
