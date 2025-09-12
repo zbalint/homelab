@@ -66,7 +66,7 @@ function tailscale.login() {
     tailscale_api_key="$(common.read_file "${TAILSCALE_SECRET_FILE}")"
 
     # shellcheck disable=SC2086
-    tailscale up ${tailscale_params} --auth-key=${tailscale_api_key}
+    tailscale up ${tailscale_params} --auth-key=${tailscale_api_key} >>"${LOG_FILE}" 2>&1
 }
 
 function tailscale.stop() {
@@ -156,9 +156,14 @@ function tailscale.restore() {
 
 function tailscale.update() {
     if tailscale.is_first_run; then
-        log.info "First run. Run tailscale login command."
-        tailscale.login
-    elif tailscale.is_restore_required; then
+        log.info "First run. Run tailscale login and waiting for device approval..."
+        if tailscale.login; then
+            log.info "Tailscale login was successful."
+        else
+            log.error "Tailscale login failed!"
+        fi
+    fi
+    if tailscale.is_restore_required; then
         log.info "This is the first run. Restoring backup before proceeding."
         if tailscale.stop && tailscale.restore && tailscale.start; then
             log.warn "${MESSAGE_TAILSCALE_RESTORE_SUCCESSFUL}"
