@@ -1,5 +1,16 @@
 #!/bin/bash
 
+readonly TAILSCALE_SECRET_FILE="${REPO_DIR}/secret/.tailscale_secret"
+
+readonly TAILSCALE_CONFIG_DIRECTORY_PATH="${REPO_DIR}/tailscale"
+readonly TAILSCALE_CUSTOM_CONFIG_DIRECTORY_PATH="${TAILSCALE_CONFIG_DIRECTORY_PATH}/${PROJECT_NAME}"
+readonly TAILSCALE_CUSTOM_BASE_CONFIG_DIRECTORY_PATH="${TAILSCALE_CONFIG_DIRECTORY_PATH}/${PROJECT_BASE_NAME}"
+readonly TAILSCALE_CONFIG_FILE_NAME="tailscale_params.txt"
+
+readonly TAILSCALE_CONFIG_FILE_PATH="${TAILSCALE_CONFIG_DIRECTORY_PATH}/${TAILSCALE_CONFIG_FILE_NAME}"
+readonly TAILSCALE_CUSTOM_CONFIG_FILE_PATH="${TAILSCALE_CUSTOM_CONFIG_DIRECTORY_PATH}/${TAILSCALE_CONFIG_FILE_NAME}"
+readonly TAILSCALE_CUSTOM_BASE_CONFIG_FILE_PATH="${TAILSCALE_CUSTOM_BASE_CONFIG_DIRECTORY_PATH}/${TAILSCALE_CONFIG_FILE_NAME}"
+
 readonly MESSAGE_TAILSCALE_RESTORE_SUCCESSFUL="Tailscale successfully restored!"
 readonly MESSAGE_TAILSCALE_RESTORE_FAILED="Failed to restore tailscale!"
 readonly MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL="Tailscale backup was successful!"
@@ -25,6 +36,37 @@ function tailscale.is_restore_required() {
     else
         return 1
     fi
+}
+
+function tailsacle.is_first_run() {
+    if ! common.is_dir_exists "${TAILSCALE_BACKUP_DIRECTORY_PATH}" && ! tailscale.status; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function tailscale.login() {
+    local tailscale_api_key
+    local tailscale_params
+    local config_file_path
+
+    if common.is_file_exists "${TAILSCALE_CUSTOM_CONFIG_FILE_PATH}"; then
+        config_file_path="${TAILSCALE_CUSTOM_CONFIG_FILE_PATH}"
+        log.info "Found custom tailscale config at ${config_file_path}"
+    elif common.is_file_exists "${TAILSCALE_CUSTOM_BASE_CONFIG_FILE_PATH}"; then
+        config_file_path="${TAILSCALE_CUSTOM_BASE_CONFIG_FILE_PATH}"
+        log.info "Found custom tailscale config at ${config_file_path}"
+    else
+        config_file_path="${TAILSCALE_CONFIG_FILE_PATH}"
+        log.info "Found default tailscale config at ${config_file_path}"
+    fi
+
+    tailscale_params="$(common.read_file "${config_file_path}")"
+    tailscale_api_key="$(common.read_file "${TAILSCALE_SECRET_FILE}")"
+
+    # shellcheck disable=SC2086
+    tailscale up ${tailscale_params} --auth-key=${tailscale_api_key}
 }
 
 function tailscale.stop() {
@@ -113,7 +155,10 @@ function tailscale.restore() {
 }
 
 function tailscale.update() {
-    if tailscale.is_restore_required; then
+    if tailscale.is_first_run; then
+        log.info "First run. Run tailscale login command."
+        tailscale.login
+    elif tailscale.is_restore_required; then
         log.info "This is the first run. Restoring backup before proceeding."
         if tailscale.stop && tailscale.restore && tailscale.start; then
             log.warn "${MESSAGE_TAILSCALE_RESTORE_SUCCESSFUL}"
