@@ -93,18 +93,8 @@ function tailscale.validate_hostname() {
     common.is_var_equals "${local_hostname}" "${current_hostname}"
 }
 
-function tailscale.login() {
-    local tailscale_api_key
-    local tailscale_params
-    local config_file_path
-
-    tailscale_params="$(common.read_file "${TAILSCALE_LOCAL_CONFIG_FILE_PATH}")"
-    tailscale_api_key="$(common.read_file "${TAILSCALE_SECRET_FILE}")"
-
-    # shellcheck disable=SC2086
-    tailscale up --reset --hostname="${CONTAINER_NAME}" ${tailscale_params} --auth-key=${tailscale_api_key} >>"${LOG_FILE}" 2>&1
-
-    if ! tailscale.validate_hostname; then
+function tailscale.set_hostname() {
+    if tailscale status >/dev/null 2>&1 && ! tailscale.validate_hostname; then
         log.warn "Tailscale hostname is not the same as the container hostname!"
         local count;count="$(tailscale status | grep -c "${CONTAINER_NAME}")"
 
@@ -118,6 +108,19 @@ function tailscale.login() {
             tailscale set --hostname="${CONTAINER_NAME}"
         fi
     fi
+}
+
+function tailscale.login() {
+    local tailscale_api_key
+    local tailscale_params
+    local config_file_path
+
+    tailscale_params="$(common.read_file "${TAILSCALE_LOCAL_CONFIG_FILE_PATH}")"
+    tailscale_api_key="$(common.read_file "${TAILSCALE_SECRET_FILE}")"
+
+    # shellcheck disable=SC2086
+    tailscale up --reset --hostname="${CONTAINER_NAME}" ${tailscale_params} --auth-key=${tailscale_api_key} >>"${LOG_FILE}" 2>&1
+    tailscale.set_hostname    
 }
 
 function tailscale.stop() {
@@ -227,6 +230,7 @@ function tailscale.update() {
 
     if tailscale.compare_config; then
         log.info "${MESSAGE_TAILSCALE_CONFIG_UNCHANGED}"
+        tailscale.set_hostname
     else
         log.info "${MESSAGE_TAILSCALE_CONFIG_CHANGE_DETECTED}"
         if tailscale.stop && tailscale.backup && tailscale.start; then
