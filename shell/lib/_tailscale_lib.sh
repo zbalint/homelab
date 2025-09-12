@@ -110,7 +110,7 @@ function tailscale.start() {
     log.debug "Starting tailscale... (delay 5sec)"
 
     systemctl start tailscaled >>"${LOG_FILE}" 2>&1 && \
-    tailscale up >>"${LOG_FILE}" 2>&1 && \
+    # tailscale up >>"${LOG_FILE}" 2>&1 && \
     sleep 5
 }
 
