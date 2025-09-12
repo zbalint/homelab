@@ -13,6 +13,8 @@ readonly GOTIFY_SECRET_CHANNEL_SECRET="$(cat "${GOTIFY_SECRET_CHANNEL_SECRET_FIL
 readonly DISCORD_NOTIFICATION_CHANNEL_SECRET="$(cat "${DISCORD_NOTIFICATION_CHANNEL_SECRET_FILE}")"
 readonly DISCORD_SECRET_CHANNEL_SECRET="$(cat "${DISCORD_SECRET_CHANNEL_SECRET_FILE}")"
 
+declare GOTIFY_IS_AVAILABLE="false"
+
 function notification.send_to_gotify() {
     local url="$1"
     local secret="$2"
@@ -96,12 +98,20 @@ function notification.send() {
     local title="$2"
     local message="$3"
     local priority="$4"
+
+    if common.is_var_equals "${GOTIFY_IS_AVAILABLE}" "false" && tailscale status >/dev/null 2>&1; then
+        GOTIFY_IS_AVAILABLE="true"
+    fi
     
     if common.is_var_equals "${level}" "SECRET"; then
-        notification.send_to_gotify_secret_channel "${title}" "${message}" "${priority}"
+        if common.is_var_equals "${GOTIFY_IS_AVAILABLE}" "true"; then
+            notification.send_to_gotify_secret_channel "${title}" "${message}" "${priority}"
+        fi
         notification.send_to_discord_secret_channel "${title}" "${message}"
     else
-        notification.send_to_gotify_notification_channel "${title}" "${message}" "${priority}"
+        if common.is_var_equals "${GOTIFY_IS_AVAILABLE}" "true"; then
+            notification.send_to_gotify_notification_channel "${title}" "${message}" "${priority}"
+        fi
         notification.send_to_discord_notification_channel "${title}" "${message}"
     fi
 }

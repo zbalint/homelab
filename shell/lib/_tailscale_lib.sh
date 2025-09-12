@@ -106,8 +106,17 @@ function tailscale.login() {
 
     if ! tailscale.validate_hostname; then
         log.warn "Tailscale hostname is not the same as the container hostname!"
-        tailscale set --hostname="${PROJECT_BASE_NAME}-temp" && \
-        tailscale set --hostname="${CONTAINER_NAME}"
+        local count;count="$(tailscale status | grep -c "${CONTAINER_NAME}")"
+
+        if (( count > 1 )); then
+            log.warn "More than one machine has the same name. Please rename or delate them until no name collosion remains."
+            notification.warn "More than one machine has the same name. Please rename or delate them until no name collosion remains."
+        else
+            log.info "Setting machine name to ${CONTAINER_NAME}"
+            tailscale set --hostname="${PROJECT_BASE_NAME}-temp" && \
+            sleep 5 && \
+            tailscale set --hostname="${CONTAINER_NAME}"
+        fi
     fi
 }
 
