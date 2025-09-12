@@ -30,8 +30,6 @@ readonly TAILSCALE_CYPHER_DIRECTORY_PATH="/mnt/gocryptfs/cypher/tailscale"
 readonly TAILSCALE_RESTORE_DIRECTORY_PATH="/mnt/gocryptfs/plain/tailscale"
 readonly TAILSCALE_BACKUP_DIRECTORY_PATH="/backup/${CONTAINER_NAME}/tailscale"
 
-readonly TAILSCALE_RUN_FLAG="${TAILSCALE_PLAIN_DIRECTORY_PATH}/.backup_exists"
-
 readonly TAILSCALE_GOCRYPTFS_REVERSE_CONFIG_FILE="${TAILSCALE_PLAIN_DIRECTORY_PATH}/.gocryptfs.reverse.conf"
 readonly TAILSCALE_GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE="/tmp/.gocryptfs.reverse.conf"
 
@@ -174,6 +172,7 @@ function tailscale.restore() {
                 common.copy_file "${TAILSCALE_GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE}" "${TAILSCALE_GOCRYPTFS_REVERSE_CONFIG_FILE}"
             fi
             gocryptfs.unmount "${TAILSCALE_RESTORE_DIRECTORY_PATH}"
+            common.copy_file "${TAILSCALE_LOCAL_CONFIG_BACKUP_FILE_PATH}" "${TAILSCALE_LOCAL_CONFIG_FILE_PATH}"
             return 0
         else
             gocryptfs.unmount "${TAILSCALE_RESTORE_DIRECTORY_PATH}"
@@ -194,6 +193,7 @@ function tailscale.update() {
             log.error "Tailscale login failed!"
         fi
     fi
+
     if tailscale.is_restore_required; then
         log.info "This is the first run. Restoring backup before proceeding."
         if tailscale.stop && tailscale.restore && tailscale.start; then
@@ -202,25 +202,26 @@ function tailscale.update() {
             log.error "${MESSAGE_TAILSCALE_RESTORE_FAILED}"
         fi
     fi
+
     if tailscale.compare_config; then
         log.info "${MESSAGE_TAILSCALE_CONFIG_UNCHANGED}"
     else
         log.info "${MESSAGE_TAILSCALE_CONFIG_CHANGE_DETECTED}"
-        # notification.info "Tailscale" "${MESSAGE_TAILSCALE_CONFIG_CHANGE_DETECTED}"
-        tailscale.load_config
-        if tailscale.status; then
-            log.info "Creating tailscale backup..."
-            if tailscale.stop && tailscale.backup && tailscale.start; then
-                log.info "${MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL}"
-                touch "${TAILSCALE_RUN_FLAG}"
-                tailscale.login
+        if tailscale.stop && tailscale.backup && tailscale.start; then
+            log.info "${MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL}"
+            if tailscale.load_config && tailscale.login && tailscale.status; then
+                log.info "${MESSAGE_TAILSCALE_UPDATE_SUCCESSFUL}"
+                notification.info "Tailscale" "${MESSAGE_TAILSCALE_UPDATE_SUCCESSFUL}"
+            elif tailscale.stop && tailscale.restore && tailscale.start && tailscale.login; then
+                log.warn "${MESSAGE_TAILSCALE_UPDATE_FAILED}"
+                notification.warn "Tailscale" "${MESSAGE_TAILSCALE_UPDATE_FAILED}"
             else
-                log.error "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
-                notification.error "Tailscale" "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
+                log.error "${MESSAGE_TAILSCALE_RESTORE_FAILED}"
+                notification.error "Tailscale" "${MESSAGE_TAILSCALE_RESTORE_FAILED}"
             fi
         else
-            log.warn "Postponing backup until tailscale already logged in."
-            notification.warn "Tailscale" "Postponing backup until tailscale already logged in."
+            log.error "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
+            notification.error "Tailscale" "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
         fi
     fi
 }
