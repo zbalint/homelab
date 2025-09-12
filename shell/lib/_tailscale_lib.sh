@@ -16,7 +16,7 @@ readonly TAILSCALE_GOCRYPTFS_REVERSE_CONFIG_FILE="${TAILSCALE_PLAIN_DIRECTORY_PA
 readonly TAILSCALE_GOCRYPTFS_REVERSE_CONFIG_BACKUP_FILE="/tmp/.gocryptfs.reverse.conf"
 
 function tailscale.status() {
-    tailscale status >/dev/null 2>&1
+    tailscale status >"${LOG_FILE}" 2>&1
 }
 
 function tailscale.is_restore_required() {
@@ -30,16 +30,16 @@ function tailscale.is_restore_required() {
 function tailscale.stop() {
     log.debug "Stopping tailscale... (delay 5sec)"
 
-    tailscale down >/dev/null 2>&1 && \
-    systemctl stop tailscaled >/dev/null 2>&1 && \
+    tailscale down >"${LOG_FILE}" 2>&1 && \
+    systemctl stop tailscaled >"${LOG_FILE}" 2>&1 && \
     sleep 5
 }
 
 function tailscale.start() {
     log.debug "Starting tailscale... (delay 5sec)"
 
-    systemctl start tailscaled >/dev/null 2>&1 && \
-    tailscale up >/dev/null 2>&1 && \
+    systemctl start tailscaled >"${LOG_FILE}" 2>&1 && \
+    tailscale up >"${LOG_FILE}" 2>&1 && \
     sleep 5
 }
 

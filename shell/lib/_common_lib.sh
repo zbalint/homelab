@@ -56,35 +56,35 @@ function common.is_dir_exists() {
 function common.create_dir() {
     local dir="$1"
 
-    mkdir -p "${dir}" >/dev/null 2>&1
+    mkdir -p "${dir}" >"${LOG_FILE}" 2>&1
 }
 
 function common.compare_files() {
     local file_1="$1"
     local file_2="$2"
 
-    diff "${file_1}" "${file_2}" >/dev/null 2>&1
+    diff "${file_1}" "${file_2}" >"${LOG_FILE}" 2>&1
 }
 
 function common.compare_directories() {
     local directory_1="$1"
     local directory_2="$2"
 
-    diff "${directory_1}/" "${directory_2}/" >/dev/null 2>&1
+    diff "${directory_1}/" "${directory_2}/" >"${LOG_FILE}" 2>&1
 }
 
 function common.copy_file() {
     local src_file="$1"
     local dst_file="$2"
 
-    /bin/cp -rf "${src_file}" "${dst_file}" >/dev/null 2>&1
+    /bin/cp -rf "${src_file}" "${dst_file}" >"${LOG_FILE}" 2>&1
 }
 
 function common.move_file() {
     local src_file="$1"
     local dst_file="$2"
 
-    /bin/mv -f "${src_file}" "${dst_file}" >/dev/null 2>&1
+    /bin/mv -f "${src_file}" "${dst_file}" >"${LOG_FILE}" 2>&1
 }
 
 function common.read_file() {
@@ -121,7 +121,7 @@ function common.copy_directory() {
     fi
     
 
-    rsync -av "${source_dir}/" "${dest_dir}/" >/dev/null 2>&1
+    rsync -av "${source_dir}/" "${dest_dir}/" >"${LOG_FILE}" 2>&1
 }
 
 function common.replace_directory() {
@@ -137,5 +137,5 @@ function common.replace_directory() {
     fi
     
 
-    rsync -av --delete "${source_dir}/" "${dest_dir}/" >/dev/null 2>&1
+    rsync -av --delete "${source_dir}/" "${dest_dir}/" >"${LOG_FILE}" 2>&1
 }

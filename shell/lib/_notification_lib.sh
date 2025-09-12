@@ -29,7 +29,7 @@ function notification.send_to_gotify() {
         priority=5
     fi
 
-    if ! curl --insecure -m 10 --retry 3 "${url}?token=${secret}" -F "title=${container}: ${title}" -F "message=${message}" -F "priority=${priority}" >/dev/null 2>&1; then
+    if ! curl --insecure -m 10 --retry 3 "${url}?token=${secret}" -F "title=${container}: ${title}" -F "message=${message}" -F "priority=${priority}" >"${LOG_FILE}" 2>&1; then
         log.error "Failed to send notification to Gotify server!"
     fi
 }
@@ -66,7 +66,7 @@ function notification.send_to_discord() {
         return 1
     fi
 
-    if ! curl -m 10 --retry 3 -H "${content_type}" -X POST -d "{\"content\":\"container: ${container}\ntitle: ${title}\nmessage: ${message}\"}" "${url}/${secret}" >/dev/null 2>&1; then
+    if ! curl -m 10 --retry 3 -H "${content_type}" -X POST -d "{\"content\":\"container: ${container}\ntitle: ${title}\nmessage: ${message}\"}" "${url}/${secret}" >"${LOG_FILE}" 2>&1; then
         log.error "Failed to send notification to Discord server!"
     fi
 }

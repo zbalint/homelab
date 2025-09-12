@@ -44,9 +44,7 @@ function log._get_level_id() {
     esac
 }
 
-function log_.log_to_file() {
-    local message="$*"
-
+function log._init() {
     if ! test -d "${LOG_DIR}"; then
         mkdir -p "${LOG_DIR}"
     fi
@@ -59,6 +57,10 @@ function log_.log_to_file() {
             echo "================================================ [$(date +"%Y-%m-%d %X")][$$] ================================================" > "${LOG_FILE}"
         fi
     fi
+}
+
+function log_.log_to_file() {
+    local message="$*"
 
     echo "${message}" >> "${LOG_FILE}"
 }
@@ -106,3 +108,4 @@ function log.fatal() {
     log._log "FATAL" "${message}"
 }
 
+log._init
