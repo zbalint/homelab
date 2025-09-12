@@ -5,16 +5,25 @@ readonly TAILSCALE_SECRET_FILE="${REPO_DIR}/secret/.tailscale_secret"
 readonly TAILSCALE_CONFIG_DIRECTORY_PATH="${REPO_DIR}/tailscale"
 readonly TAILSCALE_CUSTOM_CONFIG_DIRECTORY_PATH="${TAILSCALE_CONFIG_DIRECTORY_PATH}/${PROJECT_NAME}"
 readonly TAILSCALE_CUSTOM_BASE_CONFIG_DIRECTORY_PATH="${TAILSCALE_CONFIG_DIRECTORY_PATH}/${PROJECT_BASE_NAME}"
+
 readonly TAILSCALE_CONFIG_FILE_NAME="tailscale_params.txt"
+
+readonly TAILSCALE_LOCAL_CONFIG_DIRECTORY_PATH="${CONFIG_DIR}/tailscale"
+readonly TAILSCALE_LOCAL_CONFIG_FILE_PATH="${TAILSCALE_LOCAL_CONFIG_DIRECTORY_PATH}/${TAILSCALE_CONFIG_FILE_NAME}"
+readonly TAILSCALE_LOCAL_CONFIG_BACKUP_FILE_PATH="${TAILSCALE_LOCAL_CONFIG_DIRECTORY_PATH}/${TAILSCALE_CONFIG_FILE_NAME}.bak"
+readonly TAILSCALE_LOCAL_CONFIG_TEMP_FILE_PATH="${TEMP_DIR}/${TAILSCALE_CONFIG_FILE_NAME}.bak"
 
 readonly TAILSCALE_CONFIG_FILE_PATH="${TAILSCALE_CONFIG_DIRECTORY_PATH}/${TAILSCALE_CONFIG_FILE_NAME}"
 readonly TAILSCALE_CUSTOM_CONFIG_FILE_PATH="${TAILSCALE_CUSTOM_CONFIG_DIRECTORY_PATH}/${TAILSCALE_CONFIG_FILE_NAME}"
 readonly TAILSCALE_CUSTOM_BASE_CONFIG_FILE_PATH="${TAILSCALE_CUSTOM_BASE_CONFIG_DIRECTORY_PATH}/${TAILSCALE_CONFIG_FILE_NAME}"
 
-readonly MESSAGE_TAILSCALE_RESTORE_SUCCESSFUL="Tailscale successfully restored!"
-readonly MESSAGE_TAILSCALE_RESTORE_FAILED="Failed to restore tailscale!"
-readonly MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL="Tailscale backup was successful!"
-readonly MESSAGE_TAILSCALE_BACKUP_FAILED="Failed to backup tailscale!"
+readonly MESSAGE_TAILSCALE_CONFIG_UNCHANGED="No changes detected in the tailscale config."
+readonly MESSAGE_TAILSCALE_CONFIG_CHANGE_DETECTED="Changes detected in the tailscale config."
+readonly MESSAGE_TAILSCALE_UPDATE_SUCCESSFUL="Tailscale config successfully updated!"
+readonly MESSAGE_TAILSCALE_UPDATE_FAILED="Failed to update tailscale config, but sucessfully restored!"
+readonly MESSAGE_TAILSCALE_RESTORE_FAILED="Failed to restore tailscale config!"
+readonly MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL="Tailscale config backup was successful!"
+readonly MESSAGE_TAILSCALE_BACKUP_FAILED="Failed to backup tailscale config!"
 
 readonly TAILSCALE_PLAIN_DIRECTORY_PATH="/var/lib/tailscale"
 readonly TAILSCALE_CYPHER_DIRECTORY_PATH="/mnt/gocryptfs/cypher/tailscale"
@@ -46,7 +55,7 @@ function tailscale.is_first_run() {
     fi
 }
 
-function tailscale.login() {
+function tailscale.check_for_changes() {
     local tailscale_api_key
     local tailscale_params
     local config_file_path
@@ -62,11 +71,29 @@ function tailscale.login() {
         log.info "Found default tailscale config at ${config_file_path}"
     fi
 
-    tailscale_params="$(common.read_file "${config_file_path}")"
+    common.copy_file "${config_file_path}" "${TAILSCALE_LOCAL_CONFIG_TEMP_FILE_PATH}"
+    common.compare_files "${TAILSCALE_LOCAL_CONFIG_TEMP_FILE_PATH}" "${TAILSCALE_LOCAL_CONFIG_FILE_PATH}"
+}
+
+function tailscale.load_config() {
+    local tailscale_api_key
+    local tailscale_params
+    local config_file_path
+
+    common.copy_file "${TAILSCALE_LOCAL_CONFIG_FILE_PATH}" "${TAILSCALE_LOCAL_CONFIG_BACKUP_FILE_PATH}"
+    common.copy_file "${TAILSCALE_LOCAL_CONFIG_TEMP_FILE_PATH}" "${TAILSCALE_LOCAL_CONFIG_FILE_PATH}"
+}
+
+function tailscale.login() {
+    local tailscale_api_key
+    local tailscale_params
+    local config_file_path
+
+    tailscale_params="$(common.read_file "${TAILSCALE_LOCAL_CONFIG_FILE_PATH}")"
     tailscale_api_key="$(common.read_file "${TAILSCALE_SECRET_FILE}")"
 
     # shellcheck disable=SC2086
-    tailscale up ${tailscale_params} --auth-key=${tailscale_api_key} >>"${LOG_FILE}" 2>&1
+    tailscale up --reset ${tailscale_params} --auth-key=${tailscale_api_key} >>"${LOG_FILE}" 2>&1 &&
 }
 
 function tailscale.stop() {
@@ -170,22 +197,21 @@ function tailscale.update() {
         else
             log.error "${MESSAGE_TAILSCALE_RESTORE_FAILED}"
         fi
-    else
-        if tailscale.status; then
-            if common.is_file_exists "${TAILSCALE_RUN_FLAG}"; then
-                log.debug "Tailscale backup already exists!"
+    fi
+    if tailscale.check_for_changes; then
+        tailscale.load_config
+        if tailscale.login && tailscale.status; then
+            log.info "Creating tailscale backup..."
+            if tailscale.stop && tailscale.backup && tailscale.start; then
+                log.info "${MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL}"
+                touch "${TAILSCALE_RUN_FLAG}"
             else
-                log.info "Creating tailscale backup..."
-                if tailscale.stop && tailscale.backup && tailscale.start; then
-                    log.info "${MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL}"
-                    touch "${TAILSCALE_RUN_FLAG}"
-                else
-                    log.error "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
-                    notification.error "Tailscale" "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
-                fi
+                log.error "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
+                notification.error "Tailscale" "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
             fi
         else
             log.warn "Postponing backup until tailscale already logged in."
+            notification.warn "Tailscale" "Postponing backup until tailscale already logged in."
         fi
     fi
 }

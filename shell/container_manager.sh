@@ -9,6 +9,7 @@ readonly INSTALL_DIR="/root/homelab"
 readonly LOG_DIR="${INSTALL_DIR}/log"
 readonly TEMP_DIR="${INSTALL_DIR}/temp"
 readonly REPO_DIR="${INSTALL_DIR}/repo"
+readonly CONFIG_DIR="${INSTALL_DIR}/config"
 readonly SECRET_DIR="${REPO_DIR}/secret"
 readonly SCRIPT_DIR="${REPO_DIR}/shell"
 readonly SCRIPT_LIB_DIR="${SCRIPT_DIR}/lib"
@@ -20,6 +21,12 @@ readonly ENCRYPTION_KEY_FILE_PATH="${GLOBAL_SECRET_DIR}/.encryption_key"
 
 readonly LOG_LEVEL="DEBUG"
 readonly LOG_FILE="${LOG_DIR}/container_manager_$(date +%Y%m%d).log"
+
+mkdir -p "${INSTALL_DIR}"
+mkdir -p "${LOG_DIR}"
+mkdir -p "${TEMP_DIR}"
+mkdir -p "${REPO_DIR}"
+mkdir -p "${CONFIG_DIR}"
 
 # shellcheck disable=SC1090
 source "${SCRIPT_LIB_DIR}/_log_lib.sh"
