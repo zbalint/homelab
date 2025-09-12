@@ -86,6 +86,13 @@ function tailscale.load_config() {
     common.copy_file "${TAILSCALE_LOCAL_CONFIG_TEMP_FILE_PATH}" "${TAILSCALE_LOCAL_CONFIG_FILE_PATH}"
 }
 
+function tailscale.validate_hostname() {
+    local current_hostname; current_hostname="$(tailscale status | head -n 1 | awk '{print $2}')"
+    local local_hostname="${CONTAINER_NAME}"
+
+    common.is_var_equals "${local_hostname}" "${current_hostname}"
+}
+
 function tailscale.login() {
     local tailscale_api_key
     local tailscale_params
@@ -96,6 +103,11 @@ function tailscale.login() {
 
     # shellcheck disable=SC2086
     tailscale up --reset --hostname="${CONTAINER_NAME}" ${tailscale_params} --auth-key=${tailscale_api_key} >>"${LOG_FILE}" 2>&1
+
+    if ! tailscale.validate_hostname; then
+        log.warn "Tailscale hostname is not the same as the container hostname!"
+        tailscale set --hostname="${CONTAINER_NAME}"
+    fi
 }
 
 function tailscale.stop() {
@@ -110,7 +122,7 @@ function tailscale.start() {
     log.debug "Starting tailscale... (delay 5sec)"
 
     systemctl start tailscaled >>"${LOG_FILE}" 2>&1 && \
-    # tailscale up >>"${LOG_FILE}" 2>&1 && \
+    tailscale up >>"${LOG_FILE}" 2>&1 && \
     sleep 5
 }
 
