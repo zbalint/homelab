@@ -80,6 +80,10 @@ function tailscale.load_config() {
     local tailscale_params
     local config_file_path
 
+    if ! common.is_dir_exists "${TAILSCALE_LOCAL_CONFIG_DIRECTORY_PATH}"; then
+        common.create_directory "${TAILSCALE_LOCAL_CONFIG_DIRECTORY_PATH}"
+    fi
+
     common.copy_file "${TAILSCALE_LOCAL_CONFIG_FILE_PATH}" "${TAILSCALE_LOCAL_CONFIG_BACKUP_FILE_PATH}"
     common.copy_file "${TAILSCALE_LOCAL_CONFIG_TEMP_FILE_PATH}" "${TAILSCALE_LOCAL_CONFIG_FILE_PATH}"
 }
