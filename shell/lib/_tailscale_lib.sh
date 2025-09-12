@@ -199,6 +199,8 @@ function tailscale.update() {
         fi
     fi
     if tailscale.check_for_changes; then
+        log.info "${MESSAGE_TAILSCALE_CONFIG_CHANGE_DETECTED}"
+        # notification.info "Tailscale" "${MESSAGE_TAILSCALE_CONFIG_CHANGE_DETECTED}"
         tailscale.load_config
         if tailscale.login && tailscale.status; then
             log.info "Creating tailscale backup..."
@@ -213,5 +215,7 @@ function tailscale.update() {
             log.warn "Postponing backup until tailscale already logged in."
             notification.warn "Tailscale" "Postponing backup until tailscale already logged in."
         fi
+    else
+        log.info "${MESSAGE_TAILSCALE_CONFIG_UNCHANGED}"
     fi
 }
