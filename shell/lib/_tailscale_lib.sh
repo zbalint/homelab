@@ -208,11 +208,12 @@ function tailscale.update() {
         log.info "${MESSAGE_TAILSCALE_CONFIG_CHANGE_DETECTED}"
         # notification.info "Tailscale" "${MESSAGE_TAILSCALE_CONFIG_CHANGE_DETECTED}"
         tailscale.load_config
-        if tailscale.login && tailscale.status; then
+        if tailscale.status; then
             log.info "Creating tailscale backup..."
             if tailscale.stop && tailscale.backup && tailscale.start; then
                 log.info "${MESSAGE_TAILSCALE_BACKUP_SUCCESSFUL}"
                 touch "${TAILSCALE_RUN_FLAG}"
+                tailscale.login
             else
                 log.error "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
                 notification.error "Tailscale" "${MESSAGE_TAILSCALE_BACKUP_FAILED}"
