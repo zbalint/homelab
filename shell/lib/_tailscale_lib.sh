@@ -106,6 +106,10 @@ function tailscale.set_hostname() {
             tailscale set --hostname="${PROJECT_BASE_NAME}-temp" && \
             sleep 5 && \
             tailscale set --hostname="${CONTAINER_NAME}"
+
+            if ! tailscale.validate_hostname; then
+                log.error "Failed to set hostname."
+            fi
         fi
     fi
 }
