@@ -60,10 +60,6 @@ function tailscale.compare_config() {
     local tailscale_params
     local config_file_path
 
-    echo ${TAILSCALE_CUSTOM_CONFIG_FILE_PATH}
-    echo ${TAILSCALE_CUSTOM_BASE_CONFIG_FILE_PATH}
-    echo ${TAILSCALE_CONFIG_FILE_PATH}
-
     if common.is_file_exists "${TAILSCALE_CUSTOM_CONFIG_FILE_PATH}"; then
         config_file_path="${TAILSCALE_CUSTOM_CONFIG_FILE_PATH}"
         log.info "Found custom tailscale config at ${config_file_path}"
