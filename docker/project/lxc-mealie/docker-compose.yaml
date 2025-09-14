@@ -1,0 +1,32 @@
+services:
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:latest
+    container_name: mealie
+    restart: unless-stopped
+    network_mode: service:tailscale
+    mem_limit: 256m
+    memswap_limit: 256m
+    mem_reservation: 128m
+    cpus: 1
+    dns:
+      - 100.100.100.100
+    ports:
+      - ${BIND_ADDRESS:-127.0.0.1}:8080:9000/tcp
+    environment:
+      - TZ=Europe/Budapest
+      - ALLOW_SIGNUP=true
+    volumes:
+      - /opt/docker/volumes/mealie/appdata:/app/data
+    cap_drop:
+      - all
+    # cap_add:
+      # - chown
+      # - setuid
+      # - setgid
+    security_opt:
+      - no-new-privileges
+    healthcheck:
+      test: ["CMD-SHELL", "ss -nputwl | grep LISTEN | grep 9000"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
