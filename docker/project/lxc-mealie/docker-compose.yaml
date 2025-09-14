@@ -1,12 +1,12 @@
 services:
   mealie:
-    image: ghcr.io/mealie-recipes/mealie:latest
+    image: ghcr.io/mealie-recipes/mealie:v3.2.1
     container_name: mealie
     restart: unless-stopped
     network_mode: bridge
-    mem_limit: 256m
-    memswap_limit: 256m
-    mem_reservation: 128m
+    mem_limit: 512m
+    memswap_limit: 512m
+    mem_reservation: 256m
     cpus: 1
     dns:
       - 100.100.100.100
@@ -16,6 +16,8 @@ services:
       - ${BIND_ADDRESS:-127.0.0.1}:8080:9000/tcp
     environment:
       - TZ=Europe/Budapest
+      - PUID=4000
+      - PGID=4000
       - ALLOW_SIGNUP=true
     volumes:
       - /opt/docker/volumes/mealie/appdata:/app/data
