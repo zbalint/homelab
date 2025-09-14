@@ -1,0 +1,24 @@
+services:
+  redlib:
+    image: quay.io/redlib/redlib:latest
+    hostname: redlib
+    container_name: redlib
+    read_only: true
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    mem_reservation: 256m
+    user: nobody
+    dns:
+      - 100.100.100.100
+    network_mode: bridge
+    ports:
+      - ${BIND_ADDRESS:-127.0.0.1}:8080:8080/tcp
+    cap_drop:
+      - all
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "--tries=1", "http://localhost:8080/settings"]
+      interval: 5m
+      timeout: 3s
