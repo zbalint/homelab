@@ -9,8 +9,8 @@ services:
     memswap_limit: 512m
     mem_reservation: 256m
     user: nobody
-    dns:
-      - 100.100.100.100
+    # dns:
+    #   - 100.100.100.100
     network_mode: bridge
     ports:
       - ${BIND_ADDRESS:-127.0.0.1}:8080:8080/tcp
