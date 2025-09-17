@@ -58,7 +58,7 @@ default-lxc-endpoint: &lxc-defaults
       - type: gotify
 
 endpoints:
-  - name: traefik
+  - name: zoraxy
     url: "https://test.lab.escapethelan.com"
     group: frontend
     interval: 30s
@@ -68,22 +68,21 @@ endpoints:
     conditions:
       - "[STATUS] == 404"
       - "[RESPONSE_TIME] < 250"
-      - "[BODY] == OK"
     alerts:
         - type: gotify
 
 
-  - name: zoraxy-node-01
-    url: "https://lxc-zoraxy-01.tail0e99d.ts.net"
-    <<: *proxy-defaults
+  # - name: zoraxy-node-01
+  #   url: "https://lxc-zoraxy-01.tail0e99d.ts.net"
+  #   <<: *proxy-defaults
 
-  - name: zoraxy-node-02
-    url: "https://lxc-zoraxy-02.tail0e99d.ts.net"
-    <<: *proxy-defaults
+  # - name: zoraxy-node-02
+  #   url: "https://lxc-zoraxy-02.tail0e99d.ts.net"
+  #   <<: *proxy-defaults
 
-  - name: zoraxy-node-03
-    url: "https://lxc-zoraxy-03.tail0e99d.ts.net"
-    <<: *proxy-defaults
+  # - name: zoraxy-node-03
+  #   url: "https://lxc-zoraxy-03.tail0e99d.ts.net"
+  #   <<: *proxy-defaults
         
   - name: tcdns01.lab.escapethelan.com
     url: "https://tcdns01.lab.escapethelan.com"
