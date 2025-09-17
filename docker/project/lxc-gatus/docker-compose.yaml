@@ -6,12 +6,13 @@ services:
     mem_limit: 512m
     memswap_limit: 512m
     mem_reservation: 256m
+    network_mode: host
     cpus: 1
     # user: 4000:4000
-    dns:
-      - 100.100.100.100
-    ports:
-      - ${BIND_ADDRESS:-127.0.0.1}:8080:8080/tcp
+    # dns:
+      # - 100.100.100.100
+    # ports:
+      # - ${BIND_ADDRESS:-127.0.0.1}:8080:8080
     cap_drop:
       - all
     cap_add:
