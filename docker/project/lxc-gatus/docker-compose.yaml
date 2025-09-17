@@ -1,0 +1,28 @@
+services:
+  gatus:
+    container_name: gatus
+    image: twinproduction/gatus:latest
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    mem_reservation: 256m
+    cpus: 1
+    # user: 4000:4000
+    dns:
+      - 100.100.100.100
+    ports:
+      - ${BIND_ADDRESS:-127.0.0.1}:8080:8080/tcp
+    cap_drop:
+      - all
+    cap_add:
+      - net_raw
+    security_opt:
+      - no-new-privileges
+    volumes:
+      - /opt/docker/stacks/gatus/config:/config:ro
+      - /opt/docker/volumes/gatus/data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider 127.0.0.1:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 60

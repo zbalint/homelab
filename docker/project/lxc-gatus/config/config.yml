@@ -1,0 +1,152 @@
+storage:
+  type: sqlite
+  path: /data/data.db
+
+maintenance:
+  start: 04:00
+  duration: 1h
+  timezone: "Europe/Budapest"
+
+alerting:
+  gotify:
+    server-url: "https://gotify.lab.escapethelan.com"
+    token: "AG_kTzTqZGfugmT"
+    default-alert:
+      description: "Healthcheck!"
+      send-on-resolved: true
+      failure-threshold: 2
+      success-threshold: 3
+
+default-proxy-endpoint: &proxy-defaults
+  group: proxys
+  interval: 30s
+  client:
+    insecure: true
+    timeout: 10s
+  conditions:
+    - "[STATUS] == 404"
+    - "[RESPONSE_TIME] < 500"
+  alerts:
+      - type: gotify
+
+default-service-endpoint: &service-defaults
+  group: services
+  interval: 1m
+  client:
+    insecure: false
+    timeout: 10s
+  conditions:
+    - "[STATUS] == 200"
+    - "[RESPONSE_TIME] < 5000"
+  alerts:
+      - type: gotify
+
+default-server-endpoint: &server-defaults
+    interval: 30s
+    group: servers
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: gotify
+
+default-lxc-endpoint: &lxc-defaults
+    interval: 30s
+    group: lxc-containers
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: gotify
+
+endpoints:
+  - name: traefik
+    url: "https://test.lab.escapethelan.com"
+    group: frontend
+    interval: 30s
+    client:
+      insecure: false
+      timeout: 5s
+    conditions:
+      - "[STATUS] == 404"
+      - "[RESPONSE_TIME] < 250"
+      - "[BODY] == OK"
+    alerts:
+        - type: gotify
+
+
+  - name: zoraxy-node-01
+    url: "https://lxc-zoraxy-01.tail0e99d.ts.net"
+    <<: *proxy-defaults
+
+  - name: zoraxy-node-02
+    url: "https://lxc-zoraxy-02.tail0e99d.ts.net"
+    <<: *proxy-defaults
+
+  - name: zoraxy-node-03
+    url: "https://lxc-zoraxy-03.tail0e99d.ts.net"
+    <<: *proxy-defaults
+        
+  - name: tcdns01.lab.escapethelan.com
+    url: "https://tcdns01.lab.escapethelan.com"
+    <<: *service-defaults
+        
+  - name: tcdns02.lab.escapethelan.com
+    url: "https://tcdns02.lab.escapethelan.com"
+    <<: *service-defaults
+        
+  - name: tcdns03.lab.escapethelan.com
+    url: "https://tcdns03.lab.escapethelan.com"
+    <<: *service-defaults
+        
+  - name: aghdns01.lab.escapethelan.com
+    url: "https://aghdns01.lab.escapethelan.com"
+    <<: *service-defaults
+        
+  - name: aghdns02.lab.escapethelan.com
+    url: "https://aghdns02.lab.escapethelan.com"
+    <<: *service-defaults
+        
+  - name: aghdns03.lab.escapethelan.com
+    url: "https://aghdns03.lab.escapethelan.com"
+    <<: *service-defaults
+    
+  - name: aghdns04.lab.escapethelan.com
+    url: "https://aghdns04.lab.escapethelan.com"
+    <<: *service-defaults
+ 
+
+  - name: srv01-prd-huhbh-lan
+    url: "icmp://srv01-prd-huhbh-lan.tail0e99d.ts.net"
+    <<: *server-defaults
+
+  - name: srv01-prd-defra-lux
+    url: "icmp://srv01-prd-defra-lux.tail0e99d.ts.net"
+    <<: *server-defaults
+
+  - name: srv02-prd-defra-lux
+    url: "icmp://srv02-prd-defra-lux.tail0e99d.ts.net"
+    <<: *server-defaults
+
+  - name: srv01-prd-defra-oci
+    url: "icmp://srv01-prd-defra-oci.tail0e99d.ts.net"
+    <<: *server-defaults
+
+  - name: srv02-prd-defra-oci
+    url: "icmp://srv02-prd-defra-oci.tail0e99d.ts.net"
+    <<: *server-defaults
+
+  - name: srv01-prd-usmnk-gcp
+    url: "icmp://srv01-prd-usmnk-gcp.tail0e99d.ts.net"
+    <<: *server-defaults
+
+
+  - name: lxc-zoraxy-01
+    url: "icmp://lxc-zoraxy-01.tail0e99d.ts.net"
+    <<: *lxc-defaults
+  
+  - name: lxc-zoraxy-02
+    url: "icmp://lxc-zoraxy-02.tail0e99d.ts.net"
+    <<: *lxc-defaults
+  
+  - name: lxc-zoraxy-03
+    url: "icmp://lxc-zoraxy-03.tail0e99d.ts.net"
+    <<: *lxc-defaults
