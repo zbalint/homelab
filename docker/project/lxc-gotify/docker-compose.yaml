@@ -1,0 +1,31 @@
+services:
+  gotify:
+    container_name: gotify
+    image: gotify/server
+    restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
+    mem_reservation: 128m
+    cpus: 1
+    # user: 4000:4000
+    dns:
+      - 100.100.100.100
+    network_mode: "bridge"
+    cap_drop:
+      - all
+    cap_add:
+      - net_bind_service
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - ${BIND_ADDRESS:-127.0.0.1}:8080:80/tcp
+    volumes:
+      - /opt/docker/volumes/gotify/conf:/etc/gotify
+      - /opt/docker/volumes/gotify/appdata/data:/app/data
+    environment:
+      - TZ=Europe/Budapest
+    healthcheck:
+        test: ["CMD-SHELL", "curl -f http://127.0.0.1:80"]
+        interval: 10s
+        timeout: 5s
+        retries: 60
