@@ -1,6 +1,7 @@
 {
     "iptables": false,
     "ip6tables": false,
+    "ipv6": true,
     "default-address-pools": [
         {
             "base": "172.30.0.0/16",
