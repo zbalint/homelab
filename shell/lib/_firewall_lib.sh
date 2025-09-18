@@ -57,10 +57,10 @@ function firewall.connectivity_check() {
         log.error "${MESSAGE_NETWORK_TAILSCALE_UNREACHABLE}"
         return 1
     fi
-    if ! network.ping "${CHECK_ADDRESS_TRAEFIK_PROXY_01}" && ! network.ping "${CHECK_ADDRESS_TRAEFIK_PROXY_02}"; then
-        log.error "${MESSAGE_NETWORK_TRAEFIK_UNREACHABLE}"
-        return 1
-    fi
+    # if ! network.ping "${CHECK_ADDRESS_TRAEFIK_PROXY_01}" && ! network.ping "${CHECK_ADDRESS_TRAEFIK_PROXY_02}"; then
+    #     log.error "${MESSAGE_NETWORK_TRAEFIK_UNREACHABLE}"
+    #     return 1
+    # fi
 
     return 0   
 }

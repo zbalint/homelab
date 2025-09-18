@@ -1,0 +1,20 @@
+{
+    "iptables": false,
+    "ip6tables": false,
+    "ipv6": false,
+    "default-address-pools": [
+        {
+            "base": "172.30.0.0/16",
+            "size": 24
+        }
+    ],
+    "default-runtime": "runc",
+    "runtimes": {
+        "runsc": {
+            "path": "/usr/bin/runsc",
+            "runtimeArgs": [
+                "--platform=systrap"
+            ]
+        }
+    }
+}
