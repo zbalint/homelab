@@ -1,17 +1,20 @@
 api:
   dashboard: false
-  debug: false
+  debug: true
 
 accessLog:
   filePath: "/logs/access.log"
+  format: json
+  fields:
+    defaultMode: drop
+    names:
+      RequestHost: keep
+      RequestPath: keep
+      DownstreamStatus: keep
 
 entryPoints:
   http:
     address: ":80"
-
-ping:
-  entryPoint: https
-  manualRouting: true
 
 serversTransport:
   insecureSkipVerify: true
