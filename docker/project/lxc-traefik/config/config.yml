@@ -134,13 +134,13 @@ http:
     srv-tcdns01:
       loadBalancer:
         servers:
-          - url: "http://srv01-dns-prd-huhbh-lan:5380 "
+          - url: "http://srv01-dns-prd-huhbh-lan:5380"
         passHostHeader: true
     
     srv-tcdns02:
       loadBalancer:
         servers:
-          - url: "http://srv02-dns-prd-huhbh-lan:5380 "
+          - url: "http://srv02-dns-prd-huhbh-lan:5380"
         passHostHeader: true
     
     lxc-tcdns03:
