@@ -3,20 +3,18 @@ http:
   routers:
     authelia:
       entryPoints:
-        - "https"
+        - "http"
       rule: 'Host(`authelia.lab.escapethelan.com`)'
       middlewares:
         - default-headers
-      tls: {}      
       service: authelia
 
     it-tools:
       entryPoints:
-        - "https"
+        - "http"
       rule: "Host(`it-tools.lab.escapethelan.com`)"
       middlewares:
         - default-headers
-      tls: {}
       service: lxc-it-tools
 #endregion
 
