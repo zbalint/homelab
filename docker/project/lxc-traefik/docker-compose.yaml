@@ -1,0 +1,22 @@
+  services:
+    traefik:
+      image: traefik:latest
+      container_name: traefik
+      restart: unless-stopped
+      mem_limit: 384m
+      memswap_limit: 384m
+      mem_reservation: 128m
+      cpus: 1
+      dns:
+        - 100.100.100.100
+      network_mode: host
+      security_opt:
+        - no-new-privileges:true
+      volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /opt/docker/stacks/traefik/config/traefik.yml:/traefik.yml:ro
+        - /opt/docker/stacks/traefik/config/config.yml:/config.yml:ro
+        - /opt/docker/volumes/traefik/data/logs:/logs
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.traefik.entrypoints=http"

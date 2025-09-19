@@ -1,0 +1,88 @@
+http:
+ #region routers 
+  routers:
+    authelia:
+      entryPoints:
+        - "https"
+      rule: 'Host(`authelia.lab.escapethelan.com`)'
+      middlewares:
+        - default-headers
+      tls: {}      
+      service: authelia
+
+    it-tools:
+      entryPoints:
+        - "https"
+      rule: "Host(`it-tools.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      tls: {}
+      service: lxc-it-tools
+#endregion
+
+#region services
+  services:
+
+    authelia:
+      loadBalancer:
+        servers:
+          - url: 'http://traefik.lab.escapethelan.com:9091'
+        passHostHeader: true
+
+    lxc-it-tools:
+      loadBalancer:
+        servers:
+          - url: "http://lxc-it-tools:8080"
+        passHostHeader: true
+#endregion
+
+  middlewares:
+    authelia:
+      forwardAuth:
+        address: 'http://authelia.lab.escapethelan.com:9091/api/authz/forward-auth'
+        ## The following commented line is for configuring the Authelia URL in the proxy. We strongly suggest this is
+        ## configured in the Session Cookies section of the Authelia configuration.
+        # address: 'http://authelia:9091/api/authz/forward-auth?authelia_url=https%3A%2F%2Fauth.example.com%2F'
+        trustForwardHeader: true
+        authResponseHeaders:
+          - 'Remote-User'
+          - 'Remote-Groups'
+          - 'Remote-Email'
+          - 'Remote-Name'
+
+    authelia-basic:
+      forwardAuth:
+        address: 'http://authelia.lab.escapethelan.com:9091/api/verify?auth=basic'
+        trustForwardHeader: true
+        authResponseHeaders:
+          - 'Remote-User'
+          - 'Remote-Groups'
+          - 'Remote-Email'
+          - 'Remote-Name'
+
+    default-whitelist:
+      ipWhiteList:
+        sourceRange:
+        - "10.0.0.0/8"
+        - "192.168.0.0/16"
+        - "172.16.0.0/12"
+        - "100.64.0.0/10"
+
+    default-headers:
+      headers:
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 15552000
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+
+    secured:
+      chain:
+        middlewares:
+        - default-whitelist
+        - default-headers

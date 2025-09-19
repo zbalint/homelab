@@ -1,0 +1,21 @@
+api:
+  dashboard: false
+  debug: false
+
+accessLog:
+  filePath: "/logs/access.log"
+
+entryPoints:
+  http:
+    address: ":80"
+
+ping:
+  entryPoint: https
+  manualRouting: true
+
+serversTransport:
+  insecureSkipVerify: true
+
+providers:
+  file:
+    filename: /config.yml
