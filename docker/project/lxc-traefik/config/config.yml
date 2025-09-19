@@ -9,6 +9,70 @@ http:
         - default-headers
       service: authelia
 
+    tcdns01:
+      entryPoints:
+        - "http"
+      rule: "Host(`tcdns01.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: srv-tcdns01
+
+    tcdns02:
+      entryPoints:
+        - "http"
+      rule: "Host(`tcdns02.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: srv-tcdns02
+
+    tcdns03:
+      entryPoints:
+        - "http"
+      rule: "Host(`tcdns03.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: lxc-tcdns03
+
+    aghdns01:
+      entryPoints:
+        - "http"
+      rule: "Host(`aghdns01.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: srv-aghdns01
+
+    aghdns02:
+      entryPoints:
+        - "http"
+      rule: "Host(`aghdns02.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: srv-aghdns02
+
+    aghdns03:
+      entryPoints:
+        - "http"
+      rule: "Host(`aghdns03.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: lxc-aghdns03
+
+    aghdns04:
+      entryPoints:
+        - "http"
+      rule: "Host(`aghdns04.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: lxc-aghdns04
+
+    netbootxyz:
+      entryPoints:
+        - "http"
+      rule: "Host(`netbootxyz.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: lxc-netbootxyz
+
     it-tools:
       entryPoints:
         - "http"
@@ -16,6 +80,46 @@ http:
       middlewares:
         - default-headers
       service: lxc-it-tools
+    
+    mealie:
+      entryPoints:
+        - "http"
+      rule: "Host(`mealie.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: lxc-mealie
+
+    redlib:
+      entryPoints:
+        - "http"
+      rule: "Host(`redlib.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: lxc-redlib
+
+    gotify:
+      entryPoints:
+        - "http"
+      rule: "Host(`gotify.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: lxc-gotify
+
+    gatus:
+      entryPoints:
+        - "http"
+      rule: "Host(`gatus.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: lxc-gatus
+
+    beszel:
+      entryPoints:
+        - "http"
+      rule: "Host(`beszel.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: lxc-beszel
 #endregion
 
 #region services
@@ -27,10 +131,88 @@ http:
           - url: 'http://traefik.lab.escapethelan.com:9091'
         passHostHeader: true
 
+    srv-tcdns01:
+      loadBalancer:
+        servers:
+          - url: "http://srv01-dns-prd-huhbh-lan:5380 "
+        passHostHeader: true
+    
+    srv-tcdns02:
+      loadBalancer:
+        servers:
+          - url: "http://srv02-dns-prd-huhbh-lan:5380 "
+        passHostHeader: true
+    
+    lxc-tcdns03:
+      loadBalancer:
+        servers:
+          - url: "http://lxc-technitium-03:5380"
+        passHostHeader: true
+    
+    srv-aghdns01:
+      loadBalancer:
+        servers:
+          - url: "http://srv01-prd-defra-oci"
+        passHostHeader: true
+    
+    srv-aghdns02:
+      loadBalancer:
+        servers:
+          - url: "http://srv01-prd-defra-oci"
+        passHostHeader: true
+    
+    lxc-aghdns03:
+      loadBalancer:
+        servers:
+          - url: "http://lxc-agh-dns-03:8080"
+        passHostHeader: true
+    
+    lxc-aghdns04:
+      loadBalancer:
+        servers:
+          - url: "http://lxc-agh-dns-04:8080"
+        passHostHeader: true
+
+    lxc-netbootxyz:
+      loadBalancer:
+        servers:
+          - url: "http://lxc-netbootxyz:80"
+        passHostHeader: true
+
     lxc-it-tools:
       loadBalancer:
         servers:
           - url: "http://lxc-it-tools:8080"
+        passHostHeader: true
+
+    lxc-mealie:
+      loadBalancer:
+        servers:
+          - url: "http://lxc-mealie:8080"
+        passHostHeader: true
+    
+    lxc-redlib:
+      loadBalancer:
+        servers:
+          - url: "http://lxc-redlib:8080"
+        passHostHeader: true
+    
+    lxc-gotify:
+      loadBalancer:
+        servers:
+          - url: "http://lxc-gotify:8080"
+        passHostHeader: true
+    
+    lxc-gatus:
+      loadBalancer:
+        servers:
+          - url: "http://lxc-gatus:8080"
+        passHostHeader: true
+    
+    lxc-beszel:
+      loadBalancer:
+        servers:
+          - url: "http://lxc-beszel:8080"
         passHostHeader: true
 #endregion
 
