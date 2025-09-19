@@ -158,7 +158,7 @@ http:
     srv-aghdns02:
       loadBalancer:
         servers:
-          - url: "http://srv01-prd-defra-oci"
+          - url: "http://srv02-prd-defra-oci"
         passHostHeader: true
     
     lxc-aghdns03:
