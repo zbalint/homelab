@@ -66,11 +66,25 @@ function common.compare_files() {
     diff "${file_1}" "${file_2}" >>"${LOG_FILE}" 2>&1
 }
 
+function common.get_directory_hash() {
+    local directory="$1"
+    find "${directory}" -type f -exec md5sum {} + | sort -k 2 | awk '{print $1}' | md5sum
+}
+
 function common.compare_directories() {
     local directory_1="$1"
     local directory_2="$2"
 
     diff "${directory_1}/" "${directory_2}/" >>"${LOG_FILE}" 2>&1
+}
+
+function common.compare_directories_by_hash() {
+    local directory_1="$1"
+    local directory_2="$2"
+    local directory_1_hash; directory_1_hash="$(common.get_directory_hash "${directory_1}")"
+    local directory_2_hash; directory_2_hash="$(common.get_directory_hash "${directory_2}")"
+    
+    common.is_var_equals "${directory_1_hash}" "${directory_2_hash}"
 }
 
 function common.copy_file() {
