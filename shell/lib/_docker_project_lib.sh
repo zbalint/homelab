@@ -128,7 +128,15 @@ function docker.project.compare() {
 
     chown -R ${DOCKER_USER}:${DOCKER_USER} "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}"
 
-    common.compare_directories "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"
+    if common.compare_directories "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"; then
+        if common.compare_directories_by_hash "${DOCKER_PROJECT_TEMP_DIRECTORY_PATH}" "${DOCKER_PROJECT_PROD_DIRECTORY_PATH}"; then
+            return 0
+        else
+            return 1
+        fi
+    else
+        return 1
+    fi
 }
 
 function docker.project.check() {
