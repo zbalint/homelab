@@ -8,5 +8,5 @@
             "size": 24
         }
     ],
-    "default-runtime": "runc",
+    "default-runtime": "runc"
 }
