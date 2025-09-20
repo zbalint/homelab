@@ -67,7 +67,7 @@ endpoints:
       timeout: 5s
     conditions:
       - "[STATUS] == 200"
-      - "[RESPONSE_TIME] < 500"
+      - "[RESPONSE_TIME] < 5000"
     alerts:
         - type: gotify
 
