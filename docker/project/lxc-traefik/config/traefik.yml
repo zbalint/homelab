@@ -2,15 +2,15 @@ api:
   dashboard: false
   debug: true
 
-accessLog:
-  filePath: "/logs/access.log"
-  format: json
-  fields:
-    defaultMode: drop
-    names:
-      RequestHost: keep
-      RequestPath: keep
-      DownstreamStatus: keep
+# accessLog:
+#   filePath: "/logs/access.log"
+#   format: json
+#   fields:
+#     defaultMode: drop
+#     names:
+#       RequestHost: keep
+#       RequestPath: keep
+#       DownstreamStatus: keep
 
 entryPoints:
   http:
