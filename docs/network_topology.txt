@@ -1,0 +1,92 @@
+@startuml
+cloud my_tailnet #green [
+    Tailscale
+    My Tailnet
+    100.64.0.0/10
+]
+cloud family_tailnet #red [
+    Tailscale
+    Family Tailnet
+    100.64.0.0/10
+]
+component edge_proxy_1 [
+    Edge Proxy
+    HAProxy
+    100.80.80.71
+]
+component edge_proxy_2 [
+    Edge Proxy
+    HAProxy
+    100.80.80.72
+]
+component intermediate_proxy_1 [
+    Intermediate Proxy 
+    Zoraxy
+    100.80.80.81
+]
+component intermediate_proxy_2 [
+    Intermediate Proxy 
+    Zoraxy
+    100.80.80.82
+]
+component intermediate_proxy_3 [
+    Intermediate Proxy
+    Zoraxy
+    100.80.80.83
+]
+component waf_1 [
+    WAF
+    SafeLine
+    100.80.80.91
+]
+component waf_2 [
+    WAF
+    SafeLine
+    100.80.80.92
+]
+component service_proxy_1 [
+    Service Proxy
+    Traefik
+    100.80.80.101
+]
+component service_proxy_2 [
+    Service Proxy
+    Traefik
+    100.80.80.102
+]
+component service_proxy_3 [
+    Service Proxy
+    Traefik
+    100.80.80.103
+]
+
+family_tailnet --> edge_proxy_1
+family_tailnet --> edge_proxy_2
+
+edge_proxy_1 --> intermediate_proxy_1
+edge_proxy_1 --> intermediate_proxy_2
+edge_proxy_1 --> intermediate_proxy_3
+
+edge_proxy_2 --> intermediate_proxy_1
+edge_proxy_2 --> intermediate_proxy_2
+edge_proxy_2 --> intermediate_proxy_3
+
+my_tailnet --> intermediate_proxy_1
+my_tailnet --> intermediate_proxy_2
+my_tailnet --> intermediate_proxy_3
+
+intermediate_proxy_1 --> waf_1
+intermediate_proxy_1 --> waf_2
+intermediate_proxy_2 --> waf_1
+intermediate_proxy_2 --> waf_2
+intermediate_proxy_3 --> waf_1
+intermediate_proxy_3 --> waf_2
+
+waf_1 --> service_proxy_1
+waf_1 --> service_proxy_2
+waf_1 --> service_proxy_3
+waf_2 --> service_proxy_1
+waf_2 --> service_proxy_2
+waf_2 --> service_proxy_3
+
+@enduml

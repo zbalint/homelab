@@ -1,0 +1,102 @@
+@startuml
+nwdiag {
+  // define group at outside network definitions
+
+    group {
+        color = "red";
+
+        edge_proxy_1;
+        edge_proxy_2;
+    }
+
+    group {
+        color = "orange";
+
+        intermediate_proxy_1;
+        intermediate_proxy_2;
+        intermediate_proxy_3;
+    }
+
+    group {
+        color = "orange";
+
+        waf_1;
+        waf_2;
+    }
+
+    group {
+        color = "blue";
+
+        service_proxy_1;
+        service_proxy_2;
+        service_proxy_3;
+    }
+
+    group {
+        color = "green";
+
+        services;
+    }
+
+    network tailscale_network {
+        color = "gray"
+        address = "100.64.0.0/10"
+        user;
+    }
+
+    network edge_proxy_network {
+        color = "red"
+        address = "100.80.80.71 - 100.80.80.72"
+
+        user;
+        edge_proxy_1 [address = "100.80.80.71", description = "HAProxy"];
+        edge_proxy_2 [address = "100.80.80.72", description = "HAProxy"];
+    }
+    
+    network intermediate_proxy_network {
+        color = "orange"
+        address = "100.80.80.81 - 100.80.80.83"
+
+        edge_proxy_1;
+        edge_proxy_2;
+        intermediate_proxy_1 [address = "100.80.80.81", description = "Zoraxy"];
+        intermediate_proxy_2 [address = "100.80.80.82", description = "Zoraxy"];
+        intermediate_proxy_3 [address = "100.80.80.83", description = "Zoraxy"];
+    }
+
+    network waf_network {
+        color = "orange"
+        address = "100.80.80.91 - 100.80.80.92"
+
+
+        intermediate_proxy_1;
+        intermediate_proxy_2;
+        intermediate_proxy_3;
+        waf_1 [address = "100.80.80.91", description = "SafeLine WAF"];
+        waf_2 [address = "100.80.80.92", description = "SafeLine WAF"];
+    }
+
+    network service_proxy_network {
+        color = "blue"
+        address = "100.80.80.101 - 100.80.80.103"
+
+        waf_1;
+        waf_2;
+        service_proxy_1 [address = "100.80.80.101", description = "Traefik"];
+        service_proxy_2 [address = "100.80.80.102", description = "Traefik"];
+        service_proxy_3 [address = "100.80.80.103", description = "Traefik"];
+    }
+    
+
+    network internal_network {
+        color = "green"
+        address = "100.64.10.0/24"
+        service_proxy_1;
+        service_proxy_2;
+        service_proxy_3;
+        services;
+    }
+
+
+}
+@enduml
