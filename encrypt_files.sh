@@ -47,6 +47,7 @@ function main() {
     echo "INFO: Encrypting files..."
     encrypt_files ".env" ".env.enc"
     encrypt_files "_secret" "_secret.enc"
+    encrypt_files "_authelia.yml" "_authelia.yml.enc"
     return 0
 }
 

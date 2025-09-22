@@ -1,0 +1,20 @@
+services:
+  authelia:
+    image: 'authelia/authelia'
+    container_name: 'authelia'
+    restart: unless-stopped
+    mem_limit: 384m
+    memswap_limit: 384m
+    mem_reservation: 128m
+    cpus: 1
+    dns:
+      - 100.100.100.100
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - ${BIND_ADDRESS}:8080:9091
+    volumes:
+      - /opt/docker/stacks/authelia/config/configuration_authelia.yml:/config/configuration.yml:ro
+      - /opt/docker/stacks/authelia/config/users_database_authelia.yml:/config/users_database.yml:ro
+    environment:
+      - TZ=Europe/Budapest
