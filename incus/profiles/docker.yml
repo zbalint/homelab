@@ -21,8 +21,12 @@ devices:
     type: disk
 config:
   limits.cpu: '1'
+  limits.cpu.allowance: 25%
+  limits.cpu.priority: '1'
   limits.memory: 512MB
+  limits.memory.swap: "false"
   limits.processes: '500'
+  limits.disk.priority: '5'
   security.nesting: 'true'
   security.idmap.size: '655360'
   security.idmap.isolated: 'false'

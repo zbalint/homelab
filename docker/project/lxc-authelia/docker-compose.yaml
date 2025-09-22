@@ -16,5 +16,6 @@ services:
     volumes:
       - /opt/docker/stacks/authelia/config/configuration_authelia.yml:/config/configuration.yml:ro
       - /opt/docker/stacks/authelia/config/users_database_authelia.yml:/config/users_database.yml:ro
+      - /opt/docker/volumes/authelia:/var/lib/authelia
     environment:
       - TZ=Europe/Budapest
