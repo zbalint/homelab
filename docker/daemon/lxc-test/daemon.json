@@ -2,7 +2,7 @@
     "userns-remap": "tartarus",
     "iptables": false,
     "ip6tables": false,
-    "ipv6": true,
+    "ipv6": false,
     "default-address-pools": [
         {
             "base": "172.30.0.0/16",

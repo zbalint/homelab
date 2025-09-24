@@ -3,25 +3,43 @@ services:
     container_name: gatus
     image: twinproduction/gatus:latest
     restart: unless-stopped
+
+    # Security
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+    security_opt:
+      - apparmor:docker-default
+      - no-new-privileges:true
+
+    # Resource limits
+    cpus: 1
+    cpu_shares: 256
     mem_limit: 512m
     memswap_limit: 512m
     mem_reservation: 256m
+    pids_limit: 100
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 1024
+      nproc: 1024
+
+    # Networking
     network_mode: host
-    cpus: 1
     # user: 4000:4000
     # dns:
-      # - 100.100.100.100
+    #   - 100.100.100.100
     # ports:
-      # - ${BIND_ADDRESS:-127.0.0.1}:8080:8080
-    cap_drop:
-      - all
-    cap_add:
-      - net_raw
-    security_opt:
-      - no-new-privileges
+    #   - ${BIND_ADDRESS:-127.0.0.1}:8080:8080
+
+    # Volumes
     volumes:
       - /opt/docker/stacks/gatus/config:/config:ro
       - /opt/docker/volumes/gatus/data:/data
+
+    # Healthcheck
     healthcheck:
       test: ["CMD-SHELL", "wget --spider 127.0.0.1:8080"]
       interval: 10s
