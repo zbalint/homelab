@@ -8,5 +8,14 @@
             "size": 24
         }
     ],
-    "default-runtime": "runc"
+    "default-runtime": "runsc",
+    "runtimes": {
+        "runsc": {
+            "path": "/usr/bin/runsc",
+            "runtimeArgs": [
+                "--platform=systrap",
+                "--network=host"
+            ]
+        }
+    }
 }
