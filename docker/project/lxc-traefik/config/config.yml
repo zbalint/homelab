@@ -80,6 +80,14 @@ http:
       middlewares:
         - default-headers
       service: lxc-it-tools
+
+    omni-tools:
+      entryPoints:
+        - "http"
+      rule: "Host(`omni-tools.lab.escapethelan.com`)"
+      middlewares:
+        - default-headers
+      service: lxc-omni-tools
     
     mealie:
       entryPoints:
@@ -183,6 +191,12 @@ http:
       loadBalancer:
         servers:
           - url: "http://lxc-it-tools:8080"
+        passHostHeader: true
+
+    lxc-omni-tools:
+      loadBalancer:
+        servers:
+          - url: "http://lxc-omni-tools:8080"
         passHostHeader: true
 
     lxc-mealie:
