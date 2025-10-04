@@ -8,12 +8,17 @@ services:
     memswap_limit: 512m
     mem_reservation: 256m
     cpus: 1
+    oom_score_adj: 1000
+    pids_limit: 100
     dns:
       - 100.100.100.100
     # unfortunatly this image can't run as unprivileged
     # user: 4000:4000
     ports:
       - ${BIND_ADDRESS:-127.0.0.1}:8080:80/tcp
+    # networks:
+      # - restricted
+    privileged: false 
     cap_drop:
       - all
     cap_add:
@@ -22,8 +27,29 @@ services:
       - setuid
     security_opt:
       - no-new-privileges:true
+      - apparmor:docker-default
+    # read_only: true
+    # tmpfs:
+      # - /var/cache/nginx:rw,noexec,nosuid,nodev,size=32M
+      # - /var/run:rw,noexec,nosuid,nodev,size=4M
+    # ipc: none
+    shm_size: 16m
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 1024
+      nproc: 100
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD-SHELL", "wget --spider 127.0.0.1:80"]
       interval: 10s
       timeout: 5s
       retries: 60
+
+networks:
+  restricted:
+    internal: true 
