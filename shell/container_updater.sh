@@ -147,6 +147,14 @@ function decrypt_secrets() {
     cd "${REPO_DIR}" && bash decrypt_files.sh
 }
 
+function init() {
+    local wait_time_in_sec=$(( RANDOM % 601 ))
+    local wait_time_in_min=$(( wait_time_in_sec / 60 ))
+
+    echo "Waiting ${wait_time_in_sec}s ~ ${wait_time_in_min}m before pulling updates to avoid load spike on host..."
+    sleep ${wait_time_in_sec}
+}
+
 function main() {
     local command="$1"
     install_gocryptfs
@@ -161,4 +169,6 @@ function main() {
     fi
 }
 
+init
 main "$1"
+cp ${SCRIPT_DIR}/container_updater.sh ${BIN_DIR}/container_updater.sh

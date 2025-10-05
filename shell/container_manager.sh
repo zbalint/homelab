@@ -59,6 +59,12 @@ function init() {
         return 1
     fi
 
+    local wait_time_in_sec=$(( RANDOM % 901 ))
+    local wait_time_in_min=$(( wait_time_in_sec / 60 ))
+
+    log.info "Waiting ${wait_time_in_sec}s ~ ${wait_time_in_min}m before updating the system to avoid load spike on host..."
+    sleep ${wait_time_in_sec}
+
     return 0
 }
 
@@ -71,3 +77,4 @@ function main() {
 }
 
 init && main
+cp ${SCRIPT_DIR}/container_updater.sh ${INSTALL_DIR}/bin/container_updater.sh
