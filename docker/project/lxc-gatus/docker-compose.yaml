@@ -25,6 +25,11 @@ services:
         soft: 1024
         hard: 1024
       nproc: 1024
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
     # Networking
     network_mode: host
