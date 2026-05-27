@@ -119,14 +119,6 @@
             owner: root
             group: root
 
-        - name: Download ulogd2 config from GitHub
-          ansible.builtin.get_url:
-            url: "https://raw.githubusercontent.com/zbalint/homelab/refs/heads/master/firewall/ulogd.conf"
-            dest: /etc/ulogd.conf
-            mode: '0644'
-            owner: root
-            group: root
-
         - name: Create /run/ulog directory
           ansible.builtin.file:
             path: /run/ulog
@@ -146,6 +138,15 @@
           ansible.builtin.command:
             cmd: systemd-tmpfiles --create /etc/tmpfiles.d/ulogd.conf
           changed_when: false
+
+        - name: Download ulogd2 config from GitHub
+          ansible.builtin.get_url:
+            url: "https://raw.githubusercontent.com/zbalint/homelab/refs/heads/master/firewall/ulogd.conf"
+            dest: /etc/ulogd.conf
+            mode: '0644'
+            owner: root
+            group: root
+            notify: Restart ulogd2
 
         - name: Enable and start logrotate timer
           ansible.builtin.systemd:
@@ -246,3 +247,8 @@
       ansible.builtin.systemd:
         name: docker
         state: reloaded
+
+    - name: Restart ulogd2
+      ansible.builtin.systemd:
+        name: ulogd2
+        state: restarted
