@@ -1,0 +1,205 @@
+# ============================================================
+# CONFIGURATION
+# ============================================================
+# MITRE: TA0005 (Defense Evasion) – audit robustness & anti-tamper
+
+-D
+-b 32768
+-f 1
+--backlog_wait_time 60000
+
+# ============================================================
+# CRITICAL FILE MONITORING
+# ============================================================
+
+## Identity files
+# MITRE: T1078 (Valid Accounts)
+# MITRE: T1098 (Account Manipulation)
+-w /etc/passwd -p wa -k identity
+-w /etc/shadow -p wa -k identity
+-w /etc/group -p wa -k identity
+-w /etc/gshadow -p wa -k identity
+-w /etc/security/opasswd -p wa -k identity
+
+## Sudo configuration
+# MITRE: T1548.003 (Abuse Elevation Control Mechanism: Sudo)
+-w /etc/sudoers -p wa -k sudoers
+-w /etc/sudoers.d -p wa -k sudoers
+
+## PAM configuration
+# MITRE: T1556 (Modify Authentication Process)
+-w /etc/pam.d -p wa -k pam_config
+
+## Login tracking
+# MITRE: T1078 (Valid Accounts)
+# MITRE: T1562.002 (Clear Linux Logs)
+-w /var/log/lastlog -p wa -k login
+-w /var/log/faillog -p wa -k login
+-w /var/run/utmp -p wa -k session
+-w /var/log/wtmp -p wa -k session
+-w /var/log/btmp -p wa -k session
+
+## SSH configuration
+# MITRE: T1021.004 (Remote Services: SSH)
+# MITRE: T1098.004 (SSH Authorized Keys)
+-w /etc/ssh/sshd_config -p wa -k sshd_config
+-w /etc/ssh/ssh_config -p wa -k ssh_config
+-w /root/.ssh -p wa -k root_ssh
+
+# ============================================================
+# NETWORK & FIREWALL
+# ============================================================
+
+## nftables
+# MITRE: T1562.004 (Disable or Modify Firewall)
+-w /etc/nftables.conf -p wa -k firewall
+
+## Network configuration
+# MITRE: T1016 (System Network Configuration Discovery)
+# MITRE: T1565 (Data Manipulation)
+-w /etc/network -p wa -k network_config
+-w /etc/netplan -p wa -k network_config
+-w /etc/systemd/network -p wa -k network_config
+
+## Hosts and DNS
+# MITRE: T1565.001 (Stored Data Manipulation)
+-w /etc/hosts -p wa -k network_config
+-w /etc/hostname -p wa -k network_config
+-w /etc/resolv.conf -p wa -k network_config
+
+## Tailscale
+# MITRE: T1021 (Remote Services)
+-w /etc/default/tailscaled -p wa -k tailscale
+-w /var/lib/tailscale -p wa -k tailscale
+
+# ============================================================
+# SECURITY FRAMEWORKS
+# ============================================================
+
+## AppArmor
+# MITRE: T1562.001 (Disable or Modify Security Tools)
+-w /etc/apparmor.d -p wa -k apparmor
+-w /etc/apparmor -p wa -k apparmor
+-w /sys/kernel/security/apparmor -p wa -k apparmor
+
+## CrowdSec
+# MITRE: T1562.001 (Disable or Modify Security Tools)
+-w /etc/crowdsec -p wa -k crowdsec
+
+## AIDE
+# MITRE: T1562.001 (Disable or Modify Security Tools)
+-w /etc/aide -p wa -k aide
+-w /var/lib/aide -p wa -k aide
+
+## Audit self-monitoring
+# MITRE: T1562.002 (Disable or Modify Logging)
+-w /etc/audit -p wa -k auditd_config
+-w /sbin/auditctl -p x -k auditd_tools
+-w /sbin/auditd -p x -k auditd_tools
+-w /usr/sbin/service -p x -k auditd_tools
+
+# ============================================================
+# SYSTEM CONFIGURATION
+# ============================================================
+
+## Boot configuration
+# MITRE: T1542.003 (Bootkit)
+-w /boot -p wa -k boot
+-w /etc/grub.d -p wa -k boot
+-w /etc/default/grub -p wa -k boot
+
+## Systemd
+# MITRE: T1547.006 (Systemd Service Persistence)
+-w /etc/systemd/system -p wa -k systemd
+#-w /lib/systemd/system -p wa -k systemd
+
+## Cron jobs
+# MITRE: T1053.003 (Scheduled Task: Cron)
+-w /etc/cron.allow -p wa -k cron
+-w /etc/cron.deny -p wa -k cron
+-w /etc/cron.d -p wa -k cron
+-w /etc/cron.daily -p wa -k cron
+-w /etc/cron.hourly -p wa -k cron
+-w /etc/cron.monthly -p wa -k cron
+-w /etc/cron.weekly -p wa -k cron
+-w /etc/crontab -p wa -k cron
+-w /var/spool/cron -p wa -k cron
+
+## Init scripts
+# MITRE: T1037 (Boot or Logon Initialization Scripts)
+-w /etc/init.d -p wa -k init
+
+## Kernel parameters
+# MITRE: T1562.001 (Disable or Modify Security Tools)
+-w /etc/sysctl.conf -p wa -k sysctl
+-w /etc/sysctl.d -p wa -k sysctl
+
+## Critical binaries
+# MITRE: T1554 (Compromise Client Software Binary)
+-w /usr/bin/sudo -p wa -k critical_binary
+-w /usr/sbin/sshd -p wa -k critical_binary
+
+# ============================================================
+# SYSTEM CALL MONITORING
+# ============================================================
+
+## Kernel modules
+# MITRE: T1014 (Rootkit)
+-a always,exit -F arch=b64 -S init_module,delete_module,finit_module -k modules
+
+## Privilege escalation
+# MITRE: T1068 (Exploitation for Privilege Escalation)
+# MITRE: T1548 (Abuse Elevation Control Mechanism)
+-a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -F auid>=1000 -k privesc
+-a always,exit -F arch=b64 -S execve -C gid!=egid -F egid=0 -F auid>=1000 -k privesc
+-a always,exit -F arch=b64 -S setuid,setgid,setreuid,setregid -F auid>=1000 -k privesc
+
+## Sudo usage
+# MITRE: T1548.003 (Sudo)
+-a always,exit -F arch=b64 -S execve -F path=/usr/bin/sudo -F auid>=1000 -k sudo
+
+## Su usage
+# MITRE: T1548.001 (Setuid/Setgid)
+-a always,exit -F arch=b64 -S execve -F path=/bin/su -F auid>=1000 -k su
+-a always,exit -F arch=b64 -S execve -F path=/usr/bin/su -F auid>=1000 -k su
+
+## Capability changes
+# MITRE: T1068 (Privilege Escalation)
+-a always,exit -F arch=b64 -S capset -k capabilities
+
+## Container operations
+# MITRE: T1611 (Escape to Host)
+-a always,exit -F arch=b64 -S unshare,setns -k container_escape
+-a always,exit -F arch=b64 -S mount,umount2 -k mounts
+-a always,exit -F arch=b64 -S pivot_root -k pivot_root
+-a always,exit -F arch=b64 -S chroot -k chroot
+
+## Time changes
+# MITRE: T1070.006 (Modify System Time)
+-a always,exit -F arch=b64 -S adjtimex,settimeofday,clock_settime -k time_change
+
+## Process tracing
+# MITRE: T1055 (Process Injection)
+-a always,exit -F arch=b64 -S ptrace -F auid>=1000 -k ptrace
+
+## Process memory operations
+# MITRE: T1055 (Process Injection)
+-a always,exit -F arch=b64 -S process_vm_writev,process_vm_readv -k process_memory
+
+## Extended attributes
+# MITRE: T1562.001 (Disable Security Tools – AppArmor bypass)
+-a always,exit -F arch=b64 -S setxattr,lsetxattr,fsetxattr -F auid>=1000 -k xattr_modification
+-a always,exit -F arch=b64 -S removexattr,lremovexattr,fremovexattr -F auid>=1000 -k xattr_modification
+
+## Execution from tmp
+# MITRE: T1055 / T1105 (Staging & Execution)
+-w /tmp -p x -k tmp_exec
+-w /var/tmp -p x -k tmp_exec
+-w /dev/shm -p x -k tmp_exec
+
+# ============================================================
+# IMMUTABLE
+# ============================================================
+
+## MITRE: T1562 (Defense Evasion)
+# -e 2
