@@ -32,12 +32,25 @@
             state: link
             force: yes
 
-        - name: Disable DNSStubListener in resolved.conf
-          ansible.builtin.lineinfile:
+        - name: Configure systemd-resolved
+          ansible.builtin.ini_file:
             path: /etc/systemd/resolved.conf
-            regexp: '^#?DNSStubListener='
-            line: 'DNSStubListener=no'
-            create: yes
+            section: Resolve
+            option: "{{ item.option }}"
+            value: "{{ item.value }}"
+            mode: '0644'
+          loop:
+            - { option: MulticastDNS, value: "no" }
+            - { option: LLMNR, value: "no" }
+            - { option: DNSStubListener, value: "no" }
+          notify: Restart systemd-resolved
+
+        # - name: Disable DNSStubListener in resolved.conf
+        #   ansible.builtin.lineinfile:
+        #     path: /etc/systemd/resolved.conf
+        #     regexp: '^#?DNSStubListener='
+        #     line: 'DNSStubListener=no'
+        #     create: yes
 
         - name: Restart systemd-resolved
           ansible.builtin.systemd:
@@ -243,6 +256,11 @@
           when: not setup_done.stat.exists
 
   handlers:
+    - name: Restart systemd-resolved
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: restarted
+
     - name: Reload docker
       ansible.builtin.systemd:
         name: docker
