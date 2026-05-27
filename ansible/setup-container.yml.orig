@@ -1,0 +1,27 @@
+---
+- name: Setup Homelab Manager on Debian in LXC
+  hosts: localhost
+  connection: local
+  become: true
+
+  tasks:
+    - name: Initial setup block
+      block:
+        - name: Create HL Manager directories
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0700'
+            owner: root
+            group: root
+          loop:
+            - /root/homelab
+            - /root/homelab/bin
+
+        - name: Download homelab updater script
+          ansible.builtin.get_url:
+            url: https://raw.githubusercontent.com/zbalint/homelab/master/shell/container_updater.sh
+            dest: /root/homelab/bin/container_updater.sh
+        
+        - name: Execute homelab updater script
+          ansible.builtin.shell: bash /root/homelab/bin/container_updater.sh install
