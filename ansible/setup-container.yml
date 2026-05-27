@@ -146,7 +146,7 @@
             mode: '0644'
             owner: root
             group: root
-            notify: Restart ulogd2
+          notify: Restart ulogd2
 
         - name: Enable and start logrotate timer
           ansible.builtin.systemd:
