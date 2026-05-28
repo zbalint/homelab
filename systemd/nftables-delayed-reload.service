@@ -1,0 +1,15 @@
+[Unit]
+Description=Delayed reload of nftables to fix STUN race conditions
+After=network-online.target incus.service tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# A 10-second sleep guarantees all interfaces, virtual switches, and bridges are fully stable
+ExecStartPre=/usr/bin/sleep 10
+# The exact command you use to fix the connection manually
+ExecStart=/usr/sbin/nft -f /etc/nftables.conf
+
+[Install]
+WantedBy=multi-user.target
