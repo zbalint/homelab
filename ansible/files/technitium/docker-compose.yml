@@ -3,10 +3,10 @@ services:
     image: ghcr.io/zbalint/curated-technitium:${TECHNITIUM_TAG}
     container_name: technitium
     restart: unless-stopped
-    mem_limit: 1024m
-    memswap_limit: 1024m
-    mem_reservation: 128m
-    cpus: 1.0
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    mem_reservation: 512m
+    cpus: 2.0
     networks:
       - technitium-net
     ports:
