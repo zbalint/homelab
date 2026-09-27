@@ -1,0 +1,43 @@
+---
+- name: Confirm tested DNS host firewall rules
+  hosts: dns_hosts
+  become: true
+  gather_facts: true
+
+  vars:
+    expected_hostnames:
+      - dns01-prd-huhbh-home
+      - dns02-prd-huhbh-home
+
+  pre_tasks:
+    - name: Require explicit connectivity confirmation
+      ansible.builtin.assert:
+        that:
+          - ansible_play_hosts_all | length == 1
+          - ansible_facts['hostname'] in expected_hostnames
+          - ansible_facts['hostname'] == inventory_hostname
+          - connectivity_verified | default(false) | bool
+        fail_msg: >-
+          Select exactly one Radxa with --limit, test fresh LAN and Tailscale SSH
+          logins to it, then rerun with -e connectivity_verified=true.
+
+  tasks:
+    - name: Cancel the pending rollback timer
+      ansible.builtin.systemd_service:
+        name: homelab-input-rollback.timer
+        state: stopped
+
+    - name: Verify the firewall table is active
+      ansible.builtin.command:
+        argv:
+          - /usr/sbin/nft
+          - list
+          - table
+          - inet
+          - homelab_input
+      changed_when: false
+
+    - name: Enable the confirmed firewall at boot
+      ansible.builtin.systemd_service:
+        name: homelab-input-firewall.service
+        enabled: true

@@ -1,0 +1,14 @@
+all:
+  children:
+    dns_hosts:
+      hosts:
+        dns01-prd-huhbh-home:
+          ansible_host: REPLACE_WITH_DNS01_LAN_IP
+          ansible_user: REPLACE_WITH_EXISTING_SSH_USER
+          lan_interface: REPLACE_WITH_LAN_INTERFACE
+          lan_ipv4_cidr: REPLACE_WITH_LAN_SUBNET
+        dns02-prd-huhbh-home:
+          ansible_host: REPLACE_WITH_DNS02_LAN_IP
+          ansible_user: REPLACE_WITH_EXISTING_SSH_USER
+          lan_interface: REPLACE_WITH_LAN_INTERFACE
+          lan_ipv4_cidr: REPLACE_WITH_LAN_SUBNET

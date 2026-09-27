@@ -1,0 +1,141 @@
+---
+- name: Apply DNS host firewall rules with a rollback window
+  hosts: dns_hosts
+  become: true
+  gather_facts: true
+
+  vars:
+    expected_hostnames:
+      - dns01-prd-huhbh-home
+      - dns02-prd-huhbh-home
+
+  pre_tasks:
+    - name: Validate host and LAN inputs
+      ansible.builtin.assert:
+        that:
+          - ansible_play_hosts_all | length == 1
+          - ansible_facts['hostname'] in expected_hostnames
+          - ansible_facts['hostname'] == inventory_hostname
+          - lan_interface is defined
+          - (lan_interface | default('')) is match('^[a-zA-Z0-9_.:-]+$')
+          - lan_ipv4_cidr is defined
+          - (lan_ipv4_cidr | default('')) is match('^([0-9]{1,3}\.){3}[0-9]{1,3}/([0-9]|[12][0-9]|3[0-2])$')
+        fail_msg: >-
+          Select exactly one Radxa with --limit, and provide its LAN interface name and IPv4 CIDR.
+
+    - name: Check whether the stock nftables service is enabled
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/systemctl
+          - is-enabled
+          - nftables.service
+      register: stock_nftables_service
+      changed_when: false
+      failed_when: false
+
+    - name: Check whether the stock nftables service is active
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/systemctl
+          - is-active
+          - nftables.service
+      register: stock_nftables_active
+      changed_when: false
+      failed_when: false
+
+    - name: Prevent the stock service from flushing Docker and Tailscale rules
+      ansible.builtin.assert:
+        that:
+          - stock_nftables_service.stdout not in ['enabled', 'enabled-runtime']
+          - stock_nftables_active.stdout != 'active'
+        fail_msg: >-
+          Disable and stop the stock nftables.service safely before using this playbook;
+          its default ruleset may flush tables managed by Docker and Tailscale.
+
+  tasks:
+    - name: Create nftables configuration directory
+      ansible.builtin.file:
+        path: /etc/nftables.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Validate and install host firewall rules
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/dns-input.nft.j2"
+        dest: /etc/nftables.d/homelab-input.nft
+        owner: root
+        group: root
+        mode: '0644'
+        validate: /usr/sbin/nft -c -f %s
+      register: firewall_rules
+
+    - name: Install dedicated firewall service
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/homelab-input-firewall.service"
+        dest: /etc/systemd/system/homelab-input-firewall.service
+        owner: root
+        group: root
+        mode: '0644'
+      register: firewall_service_unit
+
+    - name: Install rollback service
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/homelab-input-rollback.service"
+        dest: /etc/systemd/system/homelab-input-rollback.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install rollback timer
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/homelab-input-rollback.timer"
+        dest: /etc/systemd/system/homelab-input-rollback.timer
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Read updated systemd units
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+    - name: Check whether the homelab firewall table is loaded
+      ansible.builtin.command:
+        argv:
+          - /usr/sbin/nft
+          - list
+          - table
+          - inet
+          - homelab_input
+      register: firewall_table
+      changed_when: false
+      failed_when: false
+
+    - name: Apply changed rules with a recovery timer
+      when: firewall_rules.changed or firewall_service_unit.changed or firewall_table.rc != 0
+      block:
+        - name: Keep unconfirmed rules from loading automatically at boot
+          ansible.builtin.systemd_service:
+            name: homelab-input-firewall.service
+            enabled: false
+
+        - name: Arm ten-minute rollback before applying rules
+          ansible.builtin.systemd_service:
+            name: homelab-input-rollback.timer
+            state: restarted
+
+        - name: Atomically reload only the homelab firewall table
+          ansible.builtin.systemd_service:
+            name: homelab-input-firewall.service
+            state: reloaded
+
+        - name: Verify the homelab firewall table is present
+          ansible.builtin.command:
+            argv:
+              - /usr/sbin/nft
+              - list
+              - table
+              - inet
+              - homelab_input
+          changed_when: false

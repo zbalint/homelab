@@ -1,0 +1,28 @@
+# Host traffic only. Docker manages forwarding and published container ports.
+add table inet homelab_input
+flush table inet homelab_input
+table inet homelab_input {
+    chain input {
+        type filter hook input priority 0; policy drop;
+
+        iifname "lo" accept
+        ct state invalid drop
+        ct state established,related accept
+
+        # ICMP includes the IPv6 neighbor discovery needed for IPv6 networking.
+        ip protocol icmp accept
+        meta l4proto ipv6-icmp accept
+
+        # DHCP replies may arrive before connection tracking has a matching flow.
+        iifname "{{ lan_interface }}" udp sport 67 udp dport 68 accept
+
+        # Tailscale's default WireGuard listen port permits direct peer links.
+        udp dport 41641 accept
+
+        # Tailscale SSH access, plus optional LAN recovery access.
+        iifname "tailscale0" tcp dport 22 accept
+{% if allow_lan_ssh | default(true) | bool %}
+        iifname "{{ lan_interface }}" ip saddr {{ lan_ipv4_cidr }} tcp dport 22 accept
+{% endif %}
+    }
+}

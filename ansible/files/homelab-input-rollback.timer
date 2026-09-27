@@ -1,0 +1,7 @@
+[Unit]
+Description=Ten-minute rollback for unconfirmed homelab firewall changes
+
+[Timer]
+OnActiveSec=10min
+AccuracySec=1s
+Unit=homelab-input-rollback.service

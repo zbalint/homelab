@@ -1,0 +1,6 @@
+[Unit]
+Description=Remove unconfirmed homelab input firewall rules
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nft delete table inet homelab_input

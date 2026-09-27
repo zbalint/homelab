@@ -1,0 +1,14 @@
+[Unit]
+Description=Homelab DNS host input firewall
+Before=docker.service tailscaled.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/sbin/nft -c -f /etc/nftables.d/homelab-input.nft
+ExecStart=/usr/sbin/nft -f /etc/nftables.d/homelab-input.nft
+ExecReload=/usr/sbin/nft -c -f /etc/nftables.d/homelab-input.nft
+ExecReload=/usr/sbin/nft -f /etc/nftables.d/homelab-input.nft
+
+[Install]
+WantedBy=multi-user.target
