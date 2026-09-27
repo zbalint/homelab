@@ -1,0 +1,37 @@
+services:
+  technitium:
+    image: ghcr.io/zbalint/curated-technitium:${TECHNITIUM_TAG}
+    container_name: technitium
+    restart: unless-stopped
+    mem_limit: 1024m
+    memswap_limit: 1024m
+    mem_reservation: 128m
+    cpus: 1.0
+    networks:
+      - technitium-net
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "5380:5380/tcp"
+    user: "65532:65532"
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - technitium-data:/etc/dns
+
+networks:
+  technitium-net:
+    driver: bridge
+
+volumes:
+  technitium-data:
