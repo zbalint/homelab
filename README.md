@@ -58,7 +58,7 @@ Validate changes on your computer with:
 
 ```sh
 ansible-playbook --syntax-check -i ansible/inventory.yml \
-  ansible/site.yml ansible/firewall.yml ansible/firewall-confirm.yml
+  ansible/site.yml ansible/firewall.yml ansible/firewall-confirm.yml ansible/technitium.yml
 ```
 
 This checks playbook syntax; it does not prove package installation or network
@@ -114,3 +114,18 @@ the two specific host IPs, its startup must wait until the Tailscale IP exists
 after boot. Decide how to provide that ordering before enabling automatic
 container restarts. Keep a working local recovery path before changing the
 firewall on either headless board.
+
+## Technitium Compose deployment
+
+`ansible/technitium.yml` stages `ansible/files/technitium/docker-compose.yml`
+and a rendered `.env` onto one Radxa at a time, owned by the existing admin
+user. It does not pull images or start containers; run `docker compose up -d`
+yourself over SSH after staging:
+
+```sh
+ansible-playbook -i ansible/inventory.yml --limit dns01-prd-huhbh-home ansible/technitium.yml \
+  -e admin_user=YOUR_USER
+```
+
+Pass `-e technitium_tag=vX.Y.Z` to stage a different image tag than the
+default. Repeat with `--limit dns02-prd-huhbh-home` for the second board.

@@ -1,0 +1,51 @@
+---
+- name: Stage the Technitium Compose deployment
+  hosts: dns_hosts
+  become: true
+  gather_facts: true
+
+  vars:
+    expected_hostnames:
+      - dns01-prd-huhbh-home
+      - dns02-prd-huhbh-home
+    technitium_dir: /opt/technitium
+    technitium_tag: v15.5.1
+
+  pre_tasks:
+    - name: Validate host and administrator inputs
+      ansible.builtin.assert:
+        that:
+          - ansible_play_hosts_all | length == 1
+          - ansible_facts['hostname'] in expected_hostnames
+          - ansible_facts['hostname'] == inventory_hostname
+          - admin_user is defined
+          - (admin_user | default('')) is match('^[a-z_][a-z0-9_-]*$')
+        fail_msg: >-
+          Select exactly one Radxa with --limit and provide the existing
+          admin_user as an extra variable.
+
+  tasks:
+    - name: Create Technitium deployment directory
+      ansible.builtin.file:
+        path: "{{ technitium_dir }}"
+        state: directory
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        mode: '0755'
+
+    - name: Copy Technitium Compose file
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/technitium/docker-compose.yml"
+        dest: "{{ technitium_dir }}/docker-compose.yml"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        mode: '0644'
+
+    - name: Write Technitium environment file
+      ansible.builtin.copy:
+        dest: "{{ technitium_dir }}/.env"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        mode: '0640'
+        content: |
+          TECHNITIUM_TAG={{ technitium_tag }}
