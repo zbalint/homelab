@@ -10,6 +10,7 @@
       - dns02-prd-huhbh-home
     technitium_dir: /opt/technitium
     technitium_tag: v15.5.1
+    technitium_bind_address: 127.0.0.1
 
   pre_tasks:
     - name: Validate host and administrator inputs
@@ -49,3 +50,4 @@
         mode: '0640'
         content: |
           TECHNITIUM_TAG={{ technitium_tag }}
+          BIND_ADDRESS={{ technitium_bind_address }}

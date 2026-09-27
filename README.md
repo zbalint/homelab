@@ -129,3 +129,11 @@ ansible-playbook -i ansible/inventory.yml --limit dns01-prd-huhbh-home ansible/t
 
 Pass `-e technitium_tag=vX.Y.Z` to stage a different image tag than the
 default. Repeat with `--limit dns02-prd-huhbh-home` for the second board.
+
+Port 53 publishes on all interfaces; the web console (5380 HTTP, 53443
+HTTPS) publishes only on `BIND_ADDRESS`, which defaults to loopback
+(`127.0.0.1`, console unreachable except from the board itself). Pass
+`-e technitium_bind_address=<tailscale-ip>` with that board's own Tailscale
+IP to reach the console over the tailnet. If Docker starts the container
+before Tailscale has assigned that IP (e.g. on boot), the port bind fails;
+`restart: unless-stopped` keeps retrying until the IP exists.
