@@ -12,3 +12,11 @@ all:
           ansible_user: REPLACE_WITH_EXISTING_SSH_USER
           lan_interface: REPLACE_WITH_LAN_INTERFACE
           lan_ipv4_cidr: REPLACE_WITH_LAN_SUBNET
+    proxy_hosts:
+      hosts:
+        proxy01-prd-huhbh-home:
+          ansible_host: REPLACE_WITH_PROXY01_LAN_IP
+          ansible_user: REPLACE_WITH_EXISTING_SSH_USER
+        proxy02-prd-huhbh-home:
+          ansible_host: REPLACE_WITH_PROXY02_LAN_IP
+          ansible_user: REPLACE_WITH_EXISTING_SSH_USER

@@ -5,7 +5,7 @@ This repository is being rebuilt from scratch. The previous configuration is kep
 
 ## Radxa DNS hosts: `dns01-prd-huhbh-home` and `dns02-prd-huhbh-home`
 
-`ansible/site.yml` is the shared remote Ansible playbook for both reinstalled
+`ansible/radxa.yml` is the shared remote Ansible playbook for both reinstalled
 Radxa DNS hosts. It creates a key-authenticated administrator and
 installs Tailscale, Docker Engine, the Compose plugin, gVisor, nftables, and
 unattended upgrades. Docker is
@@ -34,7 +34,7 @@ Check SSH access and run the playbook for one board at a time:
 cp ansible/inventory.example.yml ansible/inventory.yml
 # Edit ansible/inventory.yml before running the following commands.
 ansible -i ansible/inventory.yml --limit dns01-prd-huhbh-home dns_hosts -m ping
-ansible-playbook -i ansible/inventory.yml --limit dns01-prd-huhbh-home ansible/site.yml \
+ansible-playbook -i ansible/inventory.yml --limit dns01-prd-huhbh-home ansible/radxa.yml \
   -e admin_user=YOUR_USER \
   -e admin_ssh_public_key='YOUR_SSH_PUBLIC_KEY'
 ```
@@ -58,7 +58,8 @@ Validate changes on your computer with:
 
 ```sh
 ansible-playbook --syntax-check -i ansible/inventory.yml \
-  ansible/site.yml ansible/firewall.yml ansible/firewall-confirm.yml ansible/technitium.yml
+  ansible/radxa.yml ansible/firewall.yml ansible/firewall-confirm.yml ansible/technitium.yml \
+  ansible/walnutpi.yml
 ```
 
 This checks playbook syntax; it does not prove package installation or network
@@ -137,3 +138,41 @@ HTTPS) publishes only on `BIND_ADDRESS`, which defaults to loopback
 IP to reach the console over the tailnet. If Docker starts the container
 before Tailscale has assigned that IP (e.g. on boot), the port bind fails;
 `restart: unless-stopped` keeps retrying until the IP exists.
+
+## WalnutPi proxy hosts: `proxy01-prd-huhbh-home` and `proxy02-prd-huhbh-home`
+
+`ansible/walnutpi.yml` is the shared remote Ansible playbook for two WalnutPi
+Zero W boards (Allwinner H618), intended to run a reverse proxy and WAF stack.
+It installs the same baseline as the Radxa DNS hosts: a key-authenticated
+administrator, Tailscale, Docker Engine, the Compose plugin, gVisor, nftables,
+and unattended upgrades, with Docker configured for user namespace remapping
+and `runsc`. The proxy/WAF Compose deployment and host firewall are separate,
+not-yet-written steps, the same way Technitium and the firewall are separate
+from the Radxa baseline.
+
+This board draws enough power under sustained CPU load to hit its thermal
+shutdown threshold at its stock 1416MHz clock. The playbook enforces a
+validated 1008MHz cap (`CONFIG_CPU_MAX_FREQ`, `CONFIG_CPU_MIN_FREQ`,
+`CONFIG_CPU_GOVERNOR` in `/boot/dietpi.txt`, applied immediately via
+`/boot/dietpi/func/dietpi-set_cpu` when changed) on every run, so a future
+reflash can't leave a board running uncapped. Do not skip this playbook or
+comment out that task.
+
+As with the Radxa boards, set each board's hostname yourself in `dietpi.txt`
+(`AUTO_SETUP_NET_HOSTNAME`) before running Ansible — the playbook only
+asserts it matches, it does not set it. After DietPi first-boot setup, each
+board needs SSH access, a user with sudo access, Python 3, and `python3-apt`,
+same as the Radxa prerequisite above. Add both boards to `ansible/inventory.yml`
+under `proxy_hosts` (see `ansible/inventory.example.yml`), then run one board
+at a time:
+
+```sh
+ansible -i ansible/inventory.yml --limit proxy01-prd-huhbh-home proxy_hosts -m ping
+ansible-playbook -i ansible/inventory.yml --limit proxy01-prd-huhbh-home ansible/walnutpi.yml \
+  -e admin_user=YOUR_USER \
+  -e admin_ssh_public_key='YOUR_SSH_PUBLIC_KEY'
+```
+
+Run the same commands with `--limit proxy02-prd-huhbh-home` for the second
+board. Reuse the same `admin_user` and SSH public key as the Radxa boards
+unless you specifically want a separate administrator identity.

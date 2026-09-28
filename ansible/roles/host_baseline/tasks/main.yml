@@ -1,0 +1,136 @@
+---
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - git
+      - nftables
+      - python3
+      - sudo
+      - unattended-upgrades
+    state: present
+    update_cache: true
+
+- name: Create administrator
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    groups: sudo
+    append: true
+    shell: /bin/bash
+    create_home: true
+
+- name: Create administrator SSH directory
+  ansible.builtin.file:
+    path: "/home/{{ admin_user }}/.ssh"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: '0700'
+
+- name: Install administrator SSH public key
+  ansible.builtin.copy:
+    dest: "/home/{{ admin_user }}/.ssh/authorized_keys"
+    content: "{{ admin_ssh_public_key }}\n"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: '0600'
+
+- name: Create APT keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Install Docker signing key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/debian/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+
+- name: Configure Docker package repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/docker.sources
+    mode: '0644'
+    content: |
+      Types: deb
+      URIs: https://download.docker.com/linux/debian
+      Suites: {{ debian_codename }}
+      Components: stable
+      Architectures: arm64
+      Signed-By: /etc/apt/keyrings/docker.asc
+
+- name: Install Tailscale signing key
+  ansible.builtin.get_url:
+    url: "https://pkgs.tailscale.com/stable/debian/{{ debian_codename }}.noarmor.gpg"
+    dest: /etc/apt/keyrings/tailscale.gpg
+    mode: '0644'
+
+- name: Configure Tailscale package repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/tailscale.list
+    mode: '0644'
+    content: >-
+      deb [signed-by=/etc/apt/keyrings/tailscale.gpg]
+      https://pkgs.tailscale.com/stable/debian {{ debian_codename }} main
+
+- name: Install gVisor signing key
+  ansible.builtin.get_url:
+    url: https://gvisor.dev/archive.key
+    dest: /etc/apt/keyrings/gvisor.asc
+    mode: '0644'
+
+- name: Configure gVisor package repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/gvisor.list
+    mode: '0644'
+    content: >-
+      deb [arch=arm64 signed-by=/etc/apt/keyrings/gvisor.asc]
+      https://storage.googleapis.com/gvisor/releases release main
+
+- name: Install container and tailnet packages
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+      - runsc
+      - tailscale
+    state: present
+    update_cache: true
+
+- name: Configure Docker runtime
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: '0644'
+    content: "{{ docker_daemon_config | to_nice_json }}\n"
+  vars:
+    docker_daemon_config:
+      userns-remap: default
+      default-runtime: runsc
+      runtimes:
+        runsc:
+          path: /usr/bin/runsc
+          runtimeArgs:
+            - --platform=systrap
+  notify: Restart Docker
+
+- name: Enable Docker and Tailscale services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - docker
+    - tailscaled
+
+- name: Disable unattended automatic reboots
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/52homelab-no-auto-reboot
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      Unattended-Upgrade::Automatic-Reboot "false";

@@ -1,0 +1,53 @@
+---
+- name: Configure a WalnutPi proxy host
+  hosts: proxy_hosts
+  become: true
+  gather_facts: true
+
+  vars:
+    expected_hostnames:
+      - proxy01-prd-huhbh-home
+      - proxy02-prd-huhbh-home
+    debian_codename: "{{ ansible_facts['distribution_release'] }}"
+
+  pre_tasks:
+    - name: Validate host and administrator inputs
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['hostname'] in expected_hostnames
+          - ansible_facts['hostname'] == inventory_hostname
+          - ansible_facts['architecture'] in ['aarch64', 'arm64']
+          - debian_codename in ['bookworm', 'trixie']
+          - admin_user is defined
+          - (admin_user | default('')) is match('^[a-z_][a-z0-9_-]*$')
+          - (admin_user | default('')) != 'root'
+          - admin_ssh_public_key is defined
+          - (admin_ssh_public_key | default('')) is match('^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521) [A-Za-z0-9+/=]+( .*)?$')
+        fail_msg: >-
+          Run only on proxy01-prd-huhbh-home or proxy02-prd-huhbh-home after DietPi setup, with a valid
+          admin_user and admin_ssh_public_key supplied as extra variables.
+
+  roles:
+    - host_baseline
+
+  tasks:
+    - name: Enforce validated CPU frequency cap (thermal protection)
+      ansible.builtin.lineinfile:
+        path: /boot/dietpi.txt
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - regexp: '^CONFIG_CPU_MAX_FREQ='
+          line: CONFIG_CPU_MAX_FREQ=1008
+        - regexp: '^CONFIG_CPU_MIN_FREQ='
+          line: CONFIG_CPU_MIN_FREQ=Disabled
+        - regexp: '^CONFIG_CPU_GOVERNOR='
+          line: CONFIG_CPU_GOVERNOR=schedutil
+      notify: Apply CPU frequency cap
+
+  handlers:
+    - name: Apply CPU frequency cap
+      ansible.builtin.command:
+        argv:
+          - /boot/dietpi/func/dietpi-set_cpu
+      changed_when: true
